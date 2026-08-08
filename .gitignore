@@ -1,0 +1,18 @@
+spike/
+contracts-spike/
+node_modules/
+.env*
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/*/run-*.json
+
+# Next.js
+app/.next/
+app/out/
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
