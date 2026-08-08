@@ -1,0 +1,179 @@
+/* Quorum, shared tokens and base rules for index.html and docs.html.
+   Single source of truth for the theme, so it can't drift between pages. */
+
+:root[data-theme="dark"]{
+  --bg:#04351A;
+  --bg-tint:#053A1D;
+  --surface:#063F20;
+  --surface-2:#053A1D;
+  --on-surface:#F3F1EA;
+  --line:#1A5030;
+  --line-soft:#0E4526;
+  --fg:#F3F1EA;
+  --fg-dim:#A6B0A4;
+  --fg-faint:#93A08C;
+  --accent:#C69C58;
+  --accent-bright:#D9B274;
+  --accent-dim:#8E6E3C;
+  --on-accent:#04301A;
+  --mark:#C69C58;
+  --approved:#63CB90;
+  --refused:#E0604E;
+  --approved-wash:rgba(99,203,144,.08);
+  --approved-edge:rgba(99,203,144,.34);
+  --refused-wash:rgba(224,96,78,.09);
+  --refused-edge:rgba(224,96,78,.40);
+  --hero-wash:rgba(198,156,88,.09);
+  --header-bg:rgba(4,53,26,.86);
+}
+:root[data-theme="light"]{
+  --bg:#E9D5A8;
+  --bg-tint:#EFDFBB;
+  --surface:#04351A;
+  --surface-2:#063F20;
+  --on-surface:#F3EEDF;
+  --line:#BFA271;
+  --line-soft:#D2BB8D;
+  --fg:#04351A;
+  --fg-dim:#3A5B44;
+  --fg-faint:#4A5844;
+  --accent:#04351A;
+  --accent-bright:#0A4A26;
+  --accent-dim:#9C7C42;
+  --on-accent:#F1E3C0;
+  --mark:#04351A;
+  --approved:#1E6B41;
+  --refused:#9E2E1E;
+  --approved-wash:rgba(30,107,65,.10);
+  --approved-edge:rgba(30,107,65,.40);
+  --refused-wash:rgba(158,46,30,.09);
+  --refused-edge:rgba(158,46,30,.38);
+  --hero-wash:rgba(4,53,26,.07);
+  --header-bg:rgba(233,213,168,.88);
+}
+:root{
+  --r-surface:14px;
+  --r-control:10px;
+  --display:"Cormorant Garamond",Georgia,serif;
+  --sans:"Geist",system-ui,-apple-system,sans-serif;
+  --mono:"Geist Mono",ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  transition:background .4s var(--ease),color .4s var(--ease);
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+h1,h2,h3{margin:0;font-weight:500;letter-spacing:-.01em}
+p{margin:0}
+a{color:inherit}
+::selection{background:var(--accent);color:var(--on-accent)}
+
+/* ── nav ──────────────────────────────────────────────────────────────── */
+header{
+  position:sticky;top:0;z-index:50;height:68px;display:flex;align-items:center;
+  background:var(--header-bg);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line-soft);
+}
+.nav{display:flex;align-items:center;gap:32px;width:100%}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;flex:none}
+.mark-slot{display:block;width:32px;flex:none;line-height:0}
+.mark-slot img{width:32px;height:auto;display:block}
+.mark-slot img + svg{display:none}
+.mark-slot svg{width:32px;height:auto;display:block}
+/* The shipped mark is a flat gold raster and can't recolour like the drawn
+   fallback does via var(--mark). Gold on the light theme's gold paper reads
+   at 1.75:1, under the 3:1 floor for a graphic, so light mode shifts it
+   toward the brand green with a filter instead of shipping a second PNG. */
+:root[data-theme="light"] .mark-slot img{
+  filter:brightness(0) saturate(100%) invert(13%) sepia(55%) saturate(1900%)
+         hue-rotate(112deg) brightness(95%) contrast(97%);
+}
+.brand .name{font-family:var(--display);font-size:21px;letter-spacing:.15em;color:var(--accent)}
+:root[data-theme="light"] .brand .name{color:var(--fg)}
+.nav nav{margin-left:auto;display:flex;gap:20px;align-items:center}
+.nav nav a:not(.btn){font-size:14px;color:var(--fg-dim);text-decoration:none;transition:color .2s var(--ease)}
+.nav nav a:not(.btn):hover{color:var(--fg)}
+@media(max-width:860px){.nav nav a:not(.btn){display:none}}
+@media(max-width:420px){
+  .nav{gap:14px}
+  .nav nav{gap:10px}
+  .brand .name{display:none}
+  .nav nav .btn-primary{padding:9px 12px;font-size:12.5px}
+}
+
+.btn{
+  font-family:var(--sans);font-size:14px;font-weight:500;padding:9px 18px;
+  border-radius:var(--r-control);border:1px solid transparent;cursor:pointer;
+  text-decoration:none;display:inline-block;white-space:nowrap;
+  transition:transform .18s var(--ease),background .2s var(--ease),
+             border-color .2s var(--ease),color .2s var(--ease);
+}
+.btn-primary{background:var(--accent);color:var(--on-accent);font-weight:600;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-bright);border-color:var(--accent-bright)}
+/* Secondary buttons carry a real border and a tinted fill so they read as
+   buttons at rest, not only on hover. */
+.btn-ghost{
+  border-color:var(--accent-dim);color:var(--fg);
+  background:color-mix(in srgb,var(--accent) 10%,transparent);
+}
+.btn-ghost:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn[disabled]{opacity:.42;cursor:default;transform:none}
+
+/* theme toggle */
+.toggle{
+  width:38px;height:38px;flex:none;display:grid;place-items:center;cursor:pointer;
+  border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--fg);
+  transition:border-color .2s var(--ease),background .2s var(--ease),color .2s var(--ease);
+}
+.toggle:hover{border-color:var(--accent);color:var(--accent)}
+:root[data-theme="light"] .toggle:hover{color:var(--fg)}
+.toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toggle svg{width:17px;height:17px;display:block}
+.toggle .sun{display:none}
+:root[data-theme="dark"] .toggle .sun{display:block}
+:root[data-theme="dark"] .toggle .moon{display:none}
+
+/* ── shared section rhythm and prose ─────────────────────────────────── */
+section{padding:96px 0;border-top:1px solid var(--line-soft)}
+h2{font-family:var(--display);font-size:clamp(30px,3.6vw,44px);line-height:1.14;margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:22px}
+:root[data-theme="light"] .eyebrow{color:var(--fg-dim)}
+.prose{max-width:62ch;font-size:16.5px;color:var(--fg-dim)}
+.prose p+p{margin-top:16px}
+.prose b{color:var(--fg);font-weight:500}
+/* The emphasis convention used throughout: a highlighted term is italic and
+   gold, in the same family as the body text. Never a different typeface. */
+em, .em{
+  font-style:italic;color:var(--accent);line-height:1.15;padding-bottom:1px;display:inline-block;
+}
+:root[data-theme="light"] em, :root[data-theme="light"] .em{color:#8A6626}
+@media(max-width:900px){section{padding:64px 0}}
+
+footer{border-top:1px solid var(--line-soft);padding:34px 0;font-size:13px;color:var(--fg-faint)}
+.foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+.foot-brand{display:flex;align-items:center;gap:9px}
+.foot-brand .mark-slot{width:22px}
+.foot-brand .mark-slot img{width:22px}
+.foot-brand .name{font-family:var(--display);font-size:15px;letter-spacing:.14em;color:var(--fg-faint)}
+.foot nav{display:flex;gap:22px}
+.foot nav a{color:var(--fg-dim);text-decoration:none;display:flex;align-items:center;gap:6px}
+.foot nav a:hover{color:var(--accent)}
+.foot nav a svg{width:15px;height:15px}
+
+.rise{opacity:0;transform:translateY(18px)}
+@media(prefers-reduced-motion:no-preference){
+  .rise{transition:opacity .7s var(--ease),transform .7s var(--ease)}
+}
+.rise.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+  .rise{opacity:1;transform:none}
+  html{scroll-behavior:auto}
+  body,.btn,.toggle{transition:none}
+}

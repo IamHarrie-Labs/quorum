@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quorum, the register</title>
+<meta name="description" content="The live offering: seats consumed, the holder register, and a pre-transaction check you can run yourself.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>
+(function(){
+  try{
+    var s = localStorage.getItem("quorum-theme");
+    var t = s || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", t);
+  }catch(e){ document.documentElement.setAttribute("data-theme","dark"); }
+})();
+</script>
+<style>
+.dash-head{padding:44px 0 8px}
+.dash-top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.dash-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--fg-faint)}
+.dash-head h1{font-family:var(--display);font-size:clamp(30px,3.6vw,42px);margin-top:8px}
+.tags{display:flex;gap:9px;flex-wrap:wrap;font-family:var(--mono);font-size:11px}
+.tag{padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-control);color:var(--fg-dim)}
+.tag.gold{border-color:var(--accent-dim);color:var(--accent)}
+:root[data-theme="light"] .tag.gold{color:var(--accent-bright)}
+.tag.live{border-color:rgba(99,203,144,.4);color:var(--approved);display:flex;align-items:center;gap:7px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--approved)}
+@media(prefers-reduced-motion:no-preference){.pulse{animation:dash-pulse 2.4s ease-in-out infinite}}
+@keyframes dash-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+.dash-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;margin-top:26px}
+.panel{border:1px solid var(--line);border-radius:var(--r-surface);background:var(--bg-tint)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 22px;
+  border-bottom:1px solid var(--line-soft)}
+.panel-label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg-faint)}
+.panel-sub{font-size:12.5px;color:var(--fg-faint)}
+
+.seat-panel{padding:26px}
+.seat-count-row{display:flex;align-items:flex-end;gap:14px;margin:14px 0 24px}
+.seat-count{font-family:var(--display);font-size:76px;line-height:.86;color:var(--accent)}
+.seat-cap{font-family:var(--display);font-size:28px;color:var(--fg-faint)}
+.seat-status{margin-left:auto;text-align:right}
+.seat-status .lbl{font-size:13px;color:var(--fg)}
+.seat-status .sub{font-size:12.5px;color:var(--fg-faint);margin-top:3px}
+.seat-row{display:flex;gap:12px}
+.seat-item{flex:1;text-align:center}
+.seat-item .dot{aspect-ratio:1;border-radius:50%;border:2px solid var(--line);transition:background .3s var(--ease),border-color .3s var(--ease)}
+.seat-item.filled .dot{background:linear-gradient(135deg,var(--accent-bright),var(--accent-dim));border-color:transparent}
+.seat-item .tag-num{font-family:var(--mono);font-size:10.5px;color:var(--fg-faint);margin-top:8px}
+
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.kpi{border:1px solid var(--line);border-radius:var(--r-surface);background:var(--bg-tint);padding:20px}
+.kpi .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-faint)}
+.kpi .val{font-family:var(--display);font-size:33px;color:var(--fg);margin-top:9px}
+.kpi .sub{font-size:12px;color:var(--fg-faint);margin-top:2px}
+
+/* A grid item's default min-width is auto, which resolves to its content's
+   min-content size, not 0 — the classic grid blowout. The table inside this
+   column is forced wide (620px) for its own horizontal scroll, so without
+   min-width:0 here that width becomes the column's floor and pushes the
+   whole page wider than the viewport, at any breakpoint, in either grid. */
+.lower-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;margin-top:18px;align-items:start}
+.lower-grid > *, .dash-grid > *{min-width:0}
+@media(max-width:980px){.dash-grid,.lower-grid{grid-template-columns:1fr}}
+
+.table-scroll{overflow-x:auto}
+.t-row{display:grid;grid-template-columns:1.5fr .8fr .7fr .9fr 1fr;gap:12px;padding:14px 22px;
+  border-bottom:1px solid var(--line-soft);align-items:center;min-width:620px}
+.t-head{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-faint)}
+.t-row.body{cursor:pointer;transition:background .18s var(--ease)}
+.t-row.body:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.t-row.body:last-of-type{border-bottom:none}
+.person-id{display:flex;align-items:center;gap:9px}
+.person-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.person-id.frozen .person-dot{background:var(--refused)}
+.person-id code{font-family:var(--mono);font-size:12.5px}
+.t-cell{font-size:13.5px;color:var(--fg-dim)}
+.t-cell.seat{font-family:var(--mono);color:var(--accent)}
+.t-cell.status{font-size:12px;color:var(--fg-faint)}
+.t-cell.status.frozen{color:var(--refused)}
+.wallet-detail{padding:2px 22px 18px 45px;font-family:var(--mono);font-size:12px;color:var(--fg-faint);min-width:620px}
+.wallet-row{display:flex;gap:18px;padding:8px 0 8px 16px;border-left:1px solid var(--line-soft);align-items:center;flex-wrap:wrap}
+.wallet-row a{color:var(--accent);border-bottom:1px dotted var(--accent-dim)}
+
+.scenario-panel{padding:22px}
+.scenario-panel p{font-size:13px;color:var(--fg-faint);line-height:1.55;margin:8px 0 16px}
+.scenario{border:1px solid var(--line);border-radius:var(--r-control);padding:13px 15px;margin-bottom:9px;
+  cursor:pointer;background:var(--bg);transition:border-color .2s var(--ease),background .2s var(--ease)}
+.scenario:hover{border-color:var(--accent-dim);background:color-mix(in srgb,var(--accent) 6%,var(--bg))}
+.scenario .t{font-size:13.5px;font-weight:500;color:var(--fg)}
+.scenario .m{font-family:var(--mono);font-size:10.5px;color:var(--fg-faint);margin-top:5px}
+.reset-link{display:block;text-align:center;margin-top:14px;font-size:12.5px;color:var(--fg-faint);cursor:pointer;
+  background:none;border:none;width:100%;font-family:var(--sans)}
+.reset-link:hover{color:var(--accent)}
+
+.decision{border:1px solid var(--line);border-radius:var(--r-surface);overflow:hidden;
+  opacity:0;transform:translateY(8px);transition:opacity .3s var(--ease),transform .3s var(--ease)}
+.decision.show{opacity:1;transform:none}
+.decision-head{padding:16px 20px;border-bottom:1px solid var(--line-soft)}
+.decision-head.ok{background:var(--approved-wash);border-color:var(--approved-edge)}
+.decision-head.no{background:var(--refused-wash);border-color:var(--refused-edge)}
+.decision-head .k{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.decision-head.ok .k{color:var(--approved)}
+.decision-head.no .k{color:var(--refused)}
+.decision-head .t{font-size:14.5px;color:var(--fg);margin-top:8px;line-height:1.5}
+.decision-body{padding:18px 20px}
+.decision-body p{font-size:13px;color:var(--fg-dim);line-height:1.6;margin:0}
+.decision-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;padding-top:14px;
+  border-top:1px solid var(--line-soft)}
+.decision-fields .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-faint)}
+.decision-fields .v{font-family:var(--mono);font-size:12px;color:var(--fg);margin-top:6px;word-break:break-word}
+
+.log-row{display:grid;grid-template-columns:96px 1fr 190px 130px;gap:14px;align-items:center;
+  padding:13px 22px;border-bottom:1px solid var(--line-soft);min-width:640px}
+.log-row:last-of-type{border-bottom:none}
+.log-time{font-family:var(--mono);font-size:11px;color:var(--fg-faint)}
+.log-action{font-size:13px;color:var(--fg)}
+.log-rule{font-family:var(--mono);font-size:11px;color:var(--fg-faint)}
+.log-status{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.log-status .s{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+.log-status .s.ok{color:var(--approved)}
+.log-status .s.no{color:var(--refused)}
+.log-status a{font-family:var(--mono);font-size:11px;color:var(--accent)}
+
+@media(max-width:640px){
+  .seat-count-row{flex-wrap:wrap}
+  .seat-status{margin-left:0;text-align:left}
+  .kpis{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <mask id="q-notch">
+      <rect x="34" y="32" width="136" height="68" fill="#fff"/>
+      <circle cx="34" cy="66" r="34" fill="#fff"/>
+      <circle cx="170" cy="66" r="34" fill="#fff"/>
+      <circle cx="102" cy="30" r="30" fill="#fff"/>
+      <rect x="70" y="68" width="64" height="32" fill="#000"/>
+    </mask>
+  </defs>
+</svg>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="index.html" aria-label="Quorum home">
+      <span class="mark-slot">
+        <img src="assets/quorum-mark.png" alt="" onerror="this.remove()">
+        <svg viewBox="0 0 204 100" aria-hidden="true"><rect width="204" height="100" fill="var(--mark)" mask="url(#q-notch)"/></svg>
+      </span>
+      <span class="name">QUORUM</span>
+    </a>
+    <nav>
+      <a href="docs.html">Docs</a>
+      <button class="toggle" id="theme" type="button" aria-label="Switch colour theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.4v2.4M12 19.2v2.4M2.4 12h2.4M19.2 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/>
+        </svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"/>
+        </svg>
+      </button>
+      <a class="btn btn-primary" href="index.html">Back to overview</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap dash-head">
+    <div class="dash-top">
+      <div>
+        <div class="dash-eyebrow">Offering</div>
+        <h1>Quorum Note</h1>
+      </div>
+      <div class="tags">
+        <span class="tag gold">sg_sfa_272a</span>
+        <span class="tag">demo cap 5</span>
+        <span class="tag live"><span class="pulse"></span>Monad testnet</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="dash-grid">
+      <div class="panel seat-panel">
+        <div class="panel-head" style="padding:0;border:none;margin-bottom:2px">
+          <div class="panel-label">Seats consumed</div>
+          <div class="panel-sub" id="windowNote">standing cap, this pack</div>
+        </div>
+        <div class="seat-count-row">
+          <div class="seat-count" id="seatCount">4</div>
+          <div class="seat-cap">/ <span id="seatCap">5</span></div>
+          <div class="seat-status">
+            <div class="lbl" id="capacityLabel">Accepting subscriptions</div>
+            <div class="sub" id="seatsOpenLabel">1 open</div>
+          </div>
+        </div>
+        <div class="seat-row" id="seatRow"></div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="lbl">Persons</div><div class="val" id="kpiPersons">4</div><div class="sub">resolved identities</div></div>
+        <div class="kpi"><div class="lbl">Wallets</div><div class="val" id="kpiWallets">5</div><div class="sub">addresses mapped</div></div>
+        <div class="kpi"><div class="lbl">Max holding</div><div class="val" id="kpiConc">24%</div><div class="sub">ceiling 40%</div></div>
+        <div class="kpi"><div class="lbl">Rule pack</div><div class="val" style="font-size:22px">Standing</div><div class="sub">cap, not rolling</div></div>
+      </div>
+    </div>
+
+    <div class="lower-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-label">Holder register</div>
+          <div class="panel-sub">click a row for wallets</div>
+        </div>
+        <div class="table-scroll">
+          <div class="t-row t-head">
+            <div>Person</div><div>Wallets</div><div>Seat</div><div>Holding</div><div>CVI status</div>
+          </div>
+          <div id="holderRows"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel scenario-panel">
+          <div class="panel-label">Pre-transaction check</div>
+          <p>Run a subscription against the resulting state of the whole cap table, live.</p>
+          <div id="scenarioList"></div>
+          <button class="reset-link" id="resetBtn" type="button">Reset offering state</button>
+        </div>
+
+        <div class="decision" id="decision" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:18px">
+      <div class="panel-head">
+        <div class="panel-label">Decision log</div>
+        <span class="panel-sub" title="Wired to POST /download_travel_rule in the full build">Export travel-rule report</span>
+      </div>
+      <div class="table-scroll" id="logRows"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <a class="foot-brand" href="index.html">
+      <span class="mark-slot">
+        <img src="assets/quorum-mark.png" alt="" onerror="this.remove()">
+        <svg viewBox="0 0 204 100" aria-hidden="true"><rect width="204" height="100" fill="var(--mark)" mask="url(#q-notch)"/></svg>
+      </span>
+      <span class="name">QUORUM</span>
+    </a>
+    <nav>
+      <a href="#" aria-label="GitHub repository">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.7-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
+        GitHub
+      </a>
+      <a href="#" aria-label="Quorum on X">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9.53 6.78 15.29 0h-1.36l-5 5.79L4.95 0H.15l6.04 8.79L.15 16h1.37l5.28-6.13L11.05 16h4.8L9.53 6.78Zm-1.87 2.17-.61-.88L2.2 1.04h2.1l3.94 5.64.61.87 5.12 7.33h-2.1L7.66 8.95Z"/></svg>
+        X
+      </a>
+      <a href="docs.html">Docs</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var root = document.documentElement;
+  var toggle = document.getElementById("theme");
+  function labelToggle(){
+    var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    toggle.setAttribute("title", "Switch to " + next + " mode");
+    toggle.setAttribute("aria-label", "Switch to " + next + " mode");
+  }
+  labelToggle();
+  toggle.addEventListener("click", function(){
+    var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try{ localStorage.setItem("quorum-theme", next); }catch(e){}
+    labelToggle();
+  });
+
+  var CAP = 5;
+  var CONC_CEILING = 40; // matches the 4000 bps ceiling in contracts-spike/test/Scenes.t.sol
+
+  function seed(){
+    return [
+      { id:"0x9f2a…c418", wallets:["0x7C4a…9aE1"], seat:1, pct:22, frozen:false },
+      { id:"0x41be…7d02", wallets:["0x1F98…44b7","0xB6c1…0e39"], seat:2, pct:24, frozen:false },
+      { id:"0xd7c0…1a55", wallets:["0x3Ae5…c7d0"], seat:3, pct:15, frozen:false },
+      { id:"0x28f3…be6c", wallets:["0x9D02…f118"], seat:4, pct:9, frozen:true }
+    ];
+  }
+  function seedLog(){
+    return [
+      { time:"14:02:11", action:"Subscription settled, person 0xd7c0…1a55, seat 03", rule:"headcount 3/5", ok:true, tx:"0x4e12…8f0a" },
+      { time:"13:48:52", action:"Second wallet resolved to existing person 0x41be…7d02", rule:"no seat consumed", ok:true, tx:"0x91c3…2bd1" },
+      { time:"13:31:07", action:"Subscription settled, person 0x41be…7d02, seat 02", rule:"headcount 2/5", ok:true, tx:"0x2a7f…c904" },
+      { time:"12:58:33", action:"A-Pass frozen for person 0x28f3…be6c, seat retained", rule:"update_status · freeze", ok:true, tx:"0x77e0…41ab" }
+    ];
+  }
+
+  var HEX = "0123456789abcdef";
+  var seedCounter = 200;
+  function fakeHash(){
+    seedCounter += 7;
+    var s = seedCounter, out = "0x";
+    function draw(){ s ^= s<<13; s>>>=0; s ^= s>>>17; s ^= s<<5; s>>>=0; return HEX[s&15]; }
+    for(var i=0;i<4;i++) out += draw();
+    out += "…";
+    for(var i=0;i<4;i++) out += draw();
+    return out;
+  }
+
+  var persons = seed();
+  var log = seedLog();
+  var expanded = null;
+  var decision = null;
+
+  function taken(){ return persons.length; }
+  function open(){ return Math.max(0, CAP - taken()); }
+  function maxConc(){ return persons.reduce(function(m,p){ return Math.max(m,p.pct); }, 0); }
+  function totalWallets(){ return persons.reduce(function(n,p){ return n+p.wallets.length; }, 0); }
+
+  function pushLog(entry){
+    var d = new Date();
+    var t = [d.getHours(),d.getMinutes(),d.getSeconds()].map(function(n){return String(n).padStart(2,"0");}).join(":");
+    log.unshift({ time:t, action:entry.action, rule:entry.rule, ok:entry.ok, tx:entry.tx });
+    renderLog();
+  }
+
+  function renderSeats(){
+    var row = document.getElementById("seatRow");
+    row.innerHTML = "";
+    for(var i=0;i<CAP;i++){
+      var filled = i < taken();
+      var item = document.createElement("div");
+      item.className = "seat-item" + (filled ? " filled" : "");
+      var lbl = filled ? String(persons[i].seat).padStart(2,"0") : String(i+1).padStart(2,"0");
+      item.innerHTML = '<div class="dot"></div><div class="tag-num">' + lbl + "</div>";
+      row.appendChild(item);
+    }
+    document.getElementById("seatCount").textContent = taken();
+    document.getElementById("seatCap").textContent = CAP;
+    document.getElementById("capacityLabel").textContent = open() === 0 ? "At capacity" : "Accepting subscriptions";
+    document.getElementById("seatsOpenLabel").textContent = open() + " open";
+    document.getElementById("kpiPersons").textContent = taken();
+    document.getElementById("kpiWallets").textContent = totalWallets();
+    document.getElementById("kpiConc").textContent = maxConc() + "%";
+  }
+
+  function renderHolders(){
+    var box = document.getElementById("holderRows");
+    box.innerHTML = "";
+    persons.forEach(function(p, i){
+      var row = document.createElement("div");
+      row.className = "t-row body";
+      row.innerHTML =
+        '<div class="person-id' + (p.frozen ? " frozen" : "") + '"><span class="person-dot"></span><code>' + p.id + "</code></div>" +
+        '<div class="t-cell">' + p.wallets.length + "</div>" +
+        '<div class="t-cell seat">' + String(p.seat).padStart(2,"0") + "</div>" +
+        '<div class="t-cell">' + p.pct + "%</div>" +
+        '<div class="t-cell status' + (p.frozen ? " frozen" : "") + '">' + (p.frozen ? "Frozen" : "Verified") + "</div>";
+      row.addEventListener("click", function(){
+        expanded = expanded === i ? null : i;
+        renderHolders();
+      });
+      box.appendChild(row);
+
+      if(expanded === i){
+        var detail = document.createElement("div");
+        detail.className = "wallet-detail";
+        detail.innerHTML = p.wallets.map(function(w){
+          return '<div class="wallet-row"><span>' + w + '</span><span>seat ' + String(p.seat).padStart(2,"0") +
+                 '</span><a href="#">explorer</a></div>';
+        }).join("");
+        box.appendChild(detail);
+      }
+    });
+  }
+
+  function renderLog(){
+    var box = document.getElementById("logRows");
+    box.innerHTML = log.map(function(e){
+      return '<div class="log-row"><div class="log-time">' + e.time + '</div>' +
+        '<div class="log-action">' + e.action + '</div>' +
+        '<div class="log-rule">' + e.rule + '</div>' +
+        '<div class="log-status"><span class="s ' + (e.ok?"ok":"no") + '">' + (e.ok?"settled":"refused") + '</span>' +
+        '<a href="#">' + e.tx + '</a></div></div>';
+    }).join("");
+  }
+
+  function showDecision(kind, title, body, rule, state){
+    var el = document.getElementById("decision");
+    el.innerHTML =
+      '<div class="decision-head ' + kind + '"><div class="k">' + (kind==="ok" ? "Transfer settled" : "Transfer refused") + '</div>' +
+      '<div class="t">' + title + '</div></div>' +
+      '<div class="decision-body"><p>' + body + '</p>' +
+      '<div class="decision-fields"><div><div class="k">Rule evaluated</div><div class="v">' + rule + '</div></div>' +
+      '<div><div class="k">Resulting state</div><div class="v">' + state + '</div></div></div></div>';
+    requestAnimationFrame(function(){ el.classList.add("show"); });
+  }
+
+  function run(key){
+    var cap = CAP, n = taken();
+    if(key === "fill"){
+      if(n >= cap) return run("full");
+      var seatNo = n + 1, id = fakeHash(), tx = fakeHash();
+      persons.push({ id:id, wallets:[fakeHash()], seat:seatNo, pct:12, frozen:false });
+      renderSeats(); renderHolders();
+      showDecision("ok",
+        "New person admitted to seat " + String(seatNo).padStart(2,"0") + ".",
+        "The wallet resolved through CVI to an identity with no prior seat in this offering. Admitting it keeps the holder base inside every rule the pack enforces, so the transfer settled.",
+        "headcount · standing cap", seatNo + "/" + cap + " persons · " + (cap-seatNo) + " open");
+      pushLog({ action:"Subscription settled, new person, seat " + String(seatNo).padStart(2,"0"), rule:"headcount " + seatNo + "/" + cap, ok:true, tx:tx });
+    }
+    if(key === "full"){
+      showDecision("no",
+        "The room is full. Admitting this person would void the exemption for everyone already holding.",
+        "The wallet is verified, correctly domiciled and properly accredited. Nothing is wrong with the investor. The offering has consumed every seat this pack allows, so a new person cannot be counted without breaking the rule the security is issued under.",
+        "EXEMPTION_CAPACITY_EXHAUSTED", n + "/" + cap + " persons · 0 open");
+      pushLog({ action:"Subscription refused, cap reached, applicant fully verified", rule:"headcount " + n + "/" + cap, ok:false, tx:fakeHash() });
+    }
+    if(key === "second"){
+      var target = persons[1];
+      var tx2 = fakeHash();
+      target.wallets.push(fakeHash());
+      target.pct += 4;
+      renderSeats(); renderHolders();
+      showDecision("ok",
+        "Second wallet resolved to an existing person. No seat consumed.",
+        "A separately verified wallet returned the same KYC hash as person " + target.id + ". The register collapses both addresses to one identity, so the headcount is unchanged and the holding is summed across wallets before the concentration ceiling is checked.",
+        "person resolution · CVI", n + "/" + cap + " persons · holder now at " + target.pct + "%");
+      pushLog({ action:"Second wallet resolved to person " + target.id, rule:"no seat consumed", ok:true, tx:tx2 });
+    }
+    if(key === "conc"){
+      var t2 = persons[0];
+      var after = t2.pct + 18;
+      showDecision("no",
+        "Concentration ceiling reached across the person's wallets.",
+        "Each wallet looks modest on its own. Summed across every address resolving to person " + t2.id + ", the resulting holding would be " + after + "% of supply against a " + CONC_CEILING + "% ceiling, so the transfer is refused before it settles.",
+        "CONCENTRATION_EXCEEDED", "would be " + after + "% · ceiling " + CONC_CEILING + "%");
+      pushLog({ action:"Transfer refused, concentration across wallets of " + t2.id, rule:"conc " + after + "% > " + CONC_CEILING + "%", ok:false, tx:fakeHash() });
+    }
+  }
+
+  var scenarios = [
+    { title:"Fill the last seat", meta:"new verified person · expect settle", run:function(){ run("fill"); } },
+    { title:"Verified investor, room full", meta:"headcount cap · expect refusal", run:function(){ run("full"); } },
+    { title:"Second wallet, same person", meta:"CVI resolution · expect settle", run:function(){ run("second"); } },
+    { title:"Stake built across wallets", meta:"concentration · expect refusal", run:function(){ run("conc"); } }
+  ];
+
+  var list = document.getElementById("scenarioList");
+  scenarios.forEach(function(s){
+    var el = document.createElement("div");
+    el.className = "scenario";
+    el.innerHTML = '<div class="t">' + s.title + '</div><div class="m">' + s.meta + '</div>';
+    el.addEventListener("click", s.run);
+    list.appendChild(el);
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    persons = seed(); log = seedLog(); expanded = null;
+    document.getElementById("decision").className = "decision";
+    document.getElementById("decision").innerHTML = "";
+    renderSeats(); renderHolders(); renderLog();
+  });
+
+  renderSeats(); renderHolders(); renderLog();
+})();
+</script>
+</body>
+</html>
