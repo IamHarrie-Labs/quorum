@@ -140,7 +140,6 @@
     <div class="panel panel-pad">
 
       <div class="field-row" id="connectRow">
-        <button class="btn btn-primary" id="connectBtn" type="button" style="width:100%">Connect wallet</button>
         <div class="hint" id="networkHint">You'll need Monad testnet. We'll help you switch if you're not on it.</div>
       </div>
 
@@ -194,8 +193,8 @@
         <div class="hint">3000 = no single person may exceed 30% of supply. Set 10000 to disable.</div>
       </div>
 
-      <button class="btn btn-primary" id="deployBtn" type="button" disabled style="width:100%;padding:13px">
-        Connect wallet to deploy
+      <button class="btn btn-primary" id="deployBtn" type="button" style="width:100%;padding:13px">
+        Connect wallet
       </button>
 
       <div class="error" id="errorBox"></div>
@@ -306,6 +305,20 @@ var REGISTRY_ABI = [
 
 var provider = null, signer = null, deployedAsset = null, deployedRegistry = null;
 
+// MetaMask, OKX, and other extensions can all inject at once. Some (OKX included) only
+// expose window.okxwallet unless the user set them as their browser's default wallet.
+function getInjectedWallet(){
+  if (window.ethereum){
+    if (Array.isArray(window.ethereum.providers) && window.ethereum.providers.length){
+      return window.ethereum.providers.find(function(p){ return p.isOkxWallet || p.isOKExWallet; })
+        || window.ethereum.providers[0];
+    }
+    return window.ethereum;
+  }
+  if (window.okxwallet) return window.okxwallet;
+  return null;
+}
+
 function short(a){ return a.slice(0,6) + "…" + a.slice(-4); }
 function setStep(n){
   for (var i=1;i<=4;i++){
@@ -318,21 +331,22 @@ function showError(box, msg){ box.textContent = msg; box.classList.add("show"); 
 function clearError(box){ box.textContent = ""; box.classList.remove("show"); }
 
 async function connect(){
-  if (!window.ethereum){
-    showError(document.getElementById("errorBox"), "No injected wallet found. Install MetaMask or another EIP-1193 wallet, then reload.");
+  var eth = getInjectedWallet();
+  if (!eth){
+    showError(document.getElementById("errorBox"), "No injected wallet found. Install MetaMask, OKX Wallet, or another EIP-1193 wallet, then reload.");
     return;
   }
   try{
-    var accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-    provider = new ethers.BrowserProvider(window.ethereum);
+    var accounts = await eth.request({ method: "eth_requestAccounts" });
+    provider = new ethers.BrowserProvider(eth);
 
-    var chainIdHex = await window.ethereum.request({ method: "eth_chainId" });
+    var chainIdHex = await eth.request({ method: "eth_chainId" });
     if (chainIdHex.toLowerCase() !== MONAD_CHAIN_ID_HEX){
       try{
-        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: MONAD_CHAIN_ID_HEX }] });
+        await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: MONAD_CHAIN_ID_HEX }] });
       }catch(switchErr){
         if (switchErr.code === 4902){
-          await window.ethereum.request({
+          await eth.request({
             method: "wallet_addEthereumChain",
             params: [{ chainId: MONAD_CHAIN_ID_HEX, chainName: "Monad Testnet",
               nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
@@ -348,16 +362,13 @@ async function connect(){
     var pill = document.getElementById("walletPill");
     pill.textContent = short(addr);
     pill.classList.add("connected");
-    document.getElementById("connectBtn").style.display = "none";
     document.getElementById("networkHint").textContent = "Connected. You're set to deploy.";
-    document.getElementById("deployBtn").disabled = false;
     document.getElementById("deployBtn").textContent = "Deploy my register";
     setStep(2);
   }catch(e){
     showError(document.getElementById("errorBox"), e.shortMessage || e.message);
   }
 }
-document.getElementById("connectBtn").addEventListener("click", connect);
 
 var presets = [...document.querySelectorAll(".preset")];
 presets.forEach(function(p){
@@ -373,7 +384,7 @@ presets.forEach(function(p){
 document.getElementById("deployBtn").addEventListener("click", async function(){
   var errBox = document.getElementById("errorBox");
   clearError(errBox);
-  if (!signer){ await connect(); if (!signer) return; }
+  if (!signer){ await connect(); return; }
 
   var name = document.getElementById("assetName").value.trim() || "Quorum Note";
   var symbol = document.getElementById("assetSymbol").value.trim() || "QNOTE";
