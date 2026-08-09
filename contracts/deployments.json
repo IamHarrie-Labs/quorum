@@ -28,6 +28,11 @@
         "note": "Redeployed after adding owner() alias for issuer - required for Cleanverse's owner-signature registration checks."
       }
     },
+    "cleanverse": {
+      "atokenRequestId": "IAR20260809115822898581",
+      "atokenStatus": "ISSUED",
+      "atokenRegisterTxHash": "0x7775ccd7857df919abdb962fba52cdbba18366273a504ac2f05fadb766cbd0d7"
+    },
     "setup": [
       {
         "call": "SeatLedger.setOperator(QuorumAsset, true)",
