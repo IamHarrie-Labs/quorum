@@ -8,8 +8,9 @@ cap table, not just the recipient.
 Built for the **Cleanverse Build: Trusted Assets Hackathon** (RWA Issuance track), deployed to
 **Monad testnet**.
 
-**Live demo:** https://iamharrie-labs.github.io/quorum/dashboard.html
-**Docs / architecture:** https://iamharrie-labs.github.io/quorum/docs.html
+**Live demo:** https://tryquorum.vercel.app/dashboard.html
+**Docs / architecture:** https://tryquorum.vercel.app/docs.html
+**Mirror:** https://iamharrie-labs.github.io/quorum/dashboard.html
 
 ## The problem
 

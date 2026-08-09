@@ -2,8 +2,8 @@
 
 **Team:** Harrie · **Track:** RWA Issuance · **Chain:** Monad testnet (chainId 10143)
 **Repo:** https://github.com/IamHarrie-Labs/quorum
-**Live demo:** https://iamharrie-labs.github.io/quorum/dashboard.html
-**Docs:** https://iamharrie-labs.github.io/quorum/docs.html
+**Live demo:** https://tryquorum.vercel.app/dashboard.html
+**Docs:** https://tryquorum.vercel.app/docs.html
 
 ---
 
