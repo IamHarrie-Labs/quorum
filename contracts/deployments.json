@@ -76,6 +76,14 @@
           "0xf3617181ba1829e8ad66ed2c6ba61b1a1fade16c5aaf46128c342bbb9c4e7e14"
         ],
         "finalBalances": { "wallet1": "50", "wallet2": "30", "wallet3": "20" }
+      },
+      "freezeUnfreeze": {
+        "note": "P3's A-Pass frozen via update_status, seat retained (activeSeats stayed 5, holdsSeat(3)=true throughout), acquisition blocked - verify_apass returned a genuine on-chain APassNotActive revert while frozen.",
+        "wallet": "0x3570D7aAFb5C6240Fd55D0e5Ea8319Ef4a5959C2",
+        "freezeTxHash": "0x2f82e6be61e2452d1952bc8a9cc63488f01a7074792b6071ec7d9b688e700f4a",
+        "verifyWhileFrozen": "APassNotActive (code 0002)",
+        "unfreezeTxHash": "0x14f5850cf4fdfae898705085e83041346e201affd9d432f1175a9e658d2686c3",
+        "verifyAfterUnfreeze": "apass verify success (code 4)"
       }
     }
   }
