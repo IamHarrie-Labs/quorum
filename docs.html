@@ -298,9 +298,9 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
         <h2>Enforcement layers</h2>
         <div class="prose">
           <p>
-            A transfer through <code>QuorumAsset</code> passes three checks that are live today.
-            Two of them belong to Cleanverse. The third is Quorum's own, and it exists precisely
-            because the other two cannot express it.
+            A transfer through <code>QuorumAsset</code> passes four checks, all of them live. Three
+            run inside Cleanverse. Only the third is Quorum's own — and the fourth is the
+            interesting one, because it is Quorum's conclusion being enforced by Cleanverse.
           </p>
           <ul>
             <li><b>A-Token compliance rule.</b> Cleanverse checks the recipient's verification tier
@@ -317,15 +317,35 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
               both counts: the refusal of person 6 on headcount, and a concentration refusal where
               the receiving wallet would have held only 12% of supply while the person behind it
               would have crossed 30%, are each a real transaction on Monad testnet.</li>
+            <li><b>The subgroup write-back.</b> Quorum reads its own seat state on-chain and writes
+              the answer back into each person's A-Pass as a subgroup tag — <code>QS</code> seated,
+              <code>QU</code> not. An A-Token rule requiring <code>allowed_sub_group: "QS"</code>
+              then makes <em>Cleanverse's own engine</em> refuse anyone Quorum never seated, using
+              the only rule shape their engine has. Live: person 6 is refused by
+              <code>verify_apass</code> with an on-chain <code>SubGroupMismatch</code> revert, while
+              all seven seated wallets pass.</li>
           </ul>
           <div class="note">
-            <b>Designed, not shipped: the subgroup write-back.</b> The intended fourth layer has
-            Quorum write its seat decision back into the person's A-Pass as a subgroup tag, so that
-            an A-Token rule requiring that tag would make <em>Cleanverse's own engine</em> refuse an
-            unseated wallet, independently of Quorum's contract — two systems reaching the same
-            refusal from different directions. The write path was spiked but not completed inside
-            the build window, and it is not part of the running system. It is described here
-            because it is the natural next step, not because it exists.
+            <b>Why the fourth layer is the point.</b> Cleanverse's engine cannot compute an
+            aggregate — every rule it has is a per-wallet attribute check, so it can never answer
+            "how many distinct people hold this." Quorum can. So Quorum computes the set-level
+            answer and hands it back as a per-wallet attribute, which is precisely the shape their
+            engine <em>can</em> evaluate. The result is that a conclusion only Quorum could reach
+            gets enforced by their code, on their infrastructure, through a codepath that never
+            touches ours.
+            <br><br>
+            Person 6 is now refused <b>twice, independently</b>: once by
+            <code>QuorumAsset</code>'s transfer hook, once by Cleanverse's own check. Neither
+            refusal depends on the other, which is the property that matters — the contract still
+            enforces the cap alone if the write-back is stale, so this layer is additional evidence,
+            never load-bearing.
+          </div>
+          <div class="note">
+            <b>A finding worth recording: A-Token rules are OR-combined.</b> With both a
+            country-only rule and the <code>QS</code> rule registered, person 6 still passed — any
+            single matching rule admits a wallet. The permissive country-only rule had to be removed
+            for the subgroup gate to bind. The remaining rule carries the country condition itself,
+            so nothing was loosened. This is not documented and was established empirically.
           </div>
           <div class="note">
             <b>Why this matters for the integration.</b> Remove Cleanverse from this design and

@@ -79,6 +79,20 @@
         ],
         "finalBalances": { "wallet1": "50", "wallet2": "30", "wallet3": "20" }
       },
+      "layer4WriteBack": {
+        "note": "Quorum computes the set-level answer on-chain (holdsSeat) and writes it back into each A-Pass as a subGroup tag - QS seated, QU unseated. An A-Token rule with allowed_sub_group QS then makes Cleanverse's OWN engine refuse anyone Quorum never seated, using the only rule shape their engine has: a per-wallet attribute check. The aggregate is precomputed and handed over.",
+        "tags": { "seated": "QS", "unseated": "QU" },
+        "addRuleTxHash": "0xd96f1154012e3580528d0ef7a0e0c9af1446b5bea4854f9e23072717905a9ab7",
+        "removedPermissiveRuleTxHash": "0x3c0e02d13e352c9af8f28472cda463c5ce6b449a110e3e9e6565d266d8a5e156",
+        "removedPermissiveRuleReason": "A-Token rules are OR-combined - any matching rule allows. Verified empirically: with both a country-only rule and the QS rule present, P6 still passed on the country rule alone. The permissive rule had to be removed for the QS gate to bind.",
+        "activeRule": { "allowed_sub_group": "QS", "countries": ["SG"] },
+        "result": {
+          "seatedWalletsAllowed": 7,
+          "unseatedRefusedBy": "Cleanverse verify_apass",
+          "unseatedRevert": "SubGroupMismatch (selector 0x1b4acd11)",
+          "significance": "Person 6 is now refused twice, independently: by QuorumAsset's transfer hook, and by Cleanverse's own compliance check running their code on their infrastructure. Neither refusal depends on the other."
+        }
+      },
       "concentration": {
         "note": "Ceiling enabled live at 3000bps (30%). P2 -> P1's SECOND wallet, 60 QNOTE: refused on-chain. The receiving wallet would have held only 12% of supply - unremarkable per-wallet - but person 1, summed across three wallets, would have crossed 30%. A 30 QNOTE transfer through the same path settled, leaving person 1 at 26%.",
         "setCeilingTxHash": "0x63b1d7ce266c4a439a211603279735f3750f106edc5b704c3d6da2c44ded6068",
