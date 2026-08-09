@@ -18,6 +18,7 @@
       "QuorumAsset": {
         "address": "0x26B57c58C20C171233e15c73fA1bD814b269dD88",
         "txHash": "0x4e25f11b6534c08dffc4048bacb430a4cd66c2c73565293cd3b0077e619b7673",
+        "blockNumber": 52134953,
         "constructorArgs": {
           "name": "Quorum Note",
           "symbol": "QNOTE",
