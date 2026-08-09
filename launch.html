@@ -82,6 +82,12 @@
 .wallet-pill.connected{border-color:var(--approved-edge);color:var(--approved)}
 
 .tag{padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-family:var(--mono);font-size:10.5px;color:var(--fg-faint)}
+
+.deploy-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;
+  border-bottom:1px solid var(--line-soft)}
+.deploy-row:last-child{border-bottom:none}
+.deploy-row .t{font-size:13.5px;color:var(--fg)}
+.deploy-row .m{font-family:var(--mono);font-size:11.5px;color:var(--fg-faint);margin-top:3px}
 </style>
 </head>
 <body>
@@ -122,6 +128,7 @@
         </svg>
       </button>
       <span id="walletPill" class="wallet-pill">Not connected</span>
+      <button class="btn btn-ghost" id="disconnectBtn" type="button" style="display:none;padding:7px 13px;font-size:12.5px">Disconnect</button>
     </nav>
   </div>
 </header>
@@ -190,7 +197,7 @@
       <div class="field-row">
         <label>Concentration ceiling (basis points, 10000 = disabled)</label>
         <input type="number" id="concCeiling" value="3000" min="1" max="10000">
-        <div class="hint">3000 = no single person may exceed 30% of supply. Set 10000 to disable.</div>
+        <div class="hint" id="concHint"></div>
       </div>
 
       <button class="btn btn-primary" id="deployBtn" type="button" style="width:100%;padding:13px">
@@ -252,6 +259,13 @@
           <div class="step-body"><h4>Nobody else can touch it</h4><p>Not even us. We tried, on-chain, and got turned away. <a href="docs.html#integrate">Here's how</a>.</p></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="wrap" id="myDeploysWrap" style="margin-top:20px;display:none">
+    <div class="panel">
+      <div class="panel-head"><h3 style="font-size:15px;color:var(--fg)">Your deployments</h3></div>
+      <div class="panel-pad" style="padding-top:8px" id="myDeploysList"></div>
     </div>
   </div>
 </main>
@@ -330,6 +344,24 @@ function setStep(n){
 function showError(box, msg){ box.textContent = msg; box.classList.add("show"); }
 function clearError(box){ box.textContent = ""; box.classList.remove("show"); }
 
+function updateConcHint(){
+  var raw = parseInt(document.getElementById("concCeiling").value, 10);
+  var hint = document.getElementById("concHint");
+  if (!raw || isNaN(raw)){ hint.textContent = "How much of the total supply one person can hold, across every wallet they use."; return; }
+  if (raw >= 10000){ hint.textContent = "No ceiling. One person could end up holding the entire supply."; return; }
+  var pct = raw / 100;
+  var pctText = (pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(2)) + "%";
+  if (raw <= 500){
+    hint.textContent = "Tight: nobody can hold more than " + pctText + " of the supply, so you'll need a fairly wide base of holders.";
+  } else if (raw >= 5000){
+    hint.textContent = "Loose: one person could hold up to " + pctText + " of the supply on their own.";
+  } else {
+    hint.textContent = "No single person can end up holding more than " + pctText + " of the supply, no matter how many wallets they spread it across.";
+  }
+}
+document.getElementById("concCeiling").addEventListener("input", updateConcHint);
+updateConcHint();
+
 async function connect(){
   var eth = getInjectedWallet();
   if (!eth){
@@ -362,6 +394,7 @@ async function connect(){
     var pill = document.getElementById("walletPill");
     pill.textContent = short(addr);
     pill.classList.add("connected");
+    document.getElementById("disconnectBtn").style.display = "inline-block";
     document.getElementById("networkHint").textContent = "Connected. You're set to deploy.";
     document.getElementById("deployBtn").textContent = "Deploy my register";
     setStep(2);
@@ -369,6 +402,82 @@ async function connect(){
     showError(document.getElementById("errorBox"), e.shortMessage || e.message);
   }
 }
+
+function disconnect(){
+  signer = null;
+  provider = null;
+  var pill = document.getElementById("walletPill");
+  pill.textContent = "Not connected";
+  pill.classList.remove("connected");
+  document.getElementById("disconnectBtn").style.display = "none";
+  document.getElementById("networkHint").textContent = "You'll need Monad testnet. We'll help you switch if you're not on it.";
+  document.getElementById("deployBtn").textContent = "Connect wallet";
+  setStep(1);
+}
+document.getElementById("disconnectBtn").addEventListener("click", disconnect);
+
+var DEPLOYS_KEY = "quorum-deployments";
+function loadDeployments(){
+  try{ return JSON.parse(localStorage.getItem(DEPLOYS_KEY) || "[]"); }catch(e){ return []; }
+}
+function saveDeployment(entry){
+  var list = loadDeployments();
+  list.unshift(entry);
+  try{ localStorage.setItem(DEPLOYS_KEY, JSON.stringify(list.slice(0, 20))); }catch(e){}
+}
+function renderDeployments(){
+  var list = loadDeployments();
+  var wrap = document.getElementById("myDeploysWrap");
+  var box = document.getElementById("myDeploysList");
+  if (!list.length){ wrap.style.display = "none"; return; }
+  wrap.style.display = "block";
+  box.innerHTML = "";
+  list.forEach(function(d){
+    var row = document.createElement("div");
+    row.className = "deploy-row";
+    var main = document.createElement("div");
+    var t = document.createElement("div");
+    t.className = "t";
+    t.textContent = d.name + " (" + d.symbol + ")";
+    var m = document.createElement("div");
+    m.className = "m";
+    m.textContent = short(d.asset) + " · " + new Date(d.time).toLocaleDateString();
+    main.appendChild(t);
+    main.appendChild(m);
+    var manageBtn = document.createElement("button");
+    manageBtn.className = "btn btn-ghost";
+    manageBtn.type = "button";
+    manageBtn.textContent = "Manage";
+    manageBtn.addEventListener("click", function(){ openDeployment(d); });
+    row.appendChild(main);
+    row.appendChild(manageBtn);
+    box.appendChild(row);
+  });
+}
+function openDeployment(d){
+  deployedAsset = d.asset;
+  deployedRegistry = d.registry;
+  document.getElementById("rAsset").textContent = d.asset;
+  document.getElementById("rAsset").href = EXPLORER + "/address/" + d.asset;
+  document.getElementById("rRegistry").textContent = d.registry;
+  document.getElementById("rRegistry").href = EXPLORER + "/address/" + d.registry;
+  document.getElementById("rLedger").textContent = d.ledger;
+  document.getElementById("rLedger").href = EXPLORER + "/address/" + d.ledger;
+  document.getElementById("rTx").textContent = short(d.tx);
+  document.getElementById("rTx").href = EXPLORER + "/tx/" + d.tx;
+  document.getElementById("resultBox").classList.add("show");
+  document.getElementById("managePanel").classList.add("show");
+  registeredWallet = null;
+  document.getElementById("holderWallet").value = "";
+  document.getElementById("holderId").value = "";
+  document.getElementById("registerBtn").textContent = "Register holder";
+  document.getElementById("issueBtn").disabled = true;
+  document.getElementById("issueBtn").textContent = "Register a holder first";
+  clearError(document.getElementById("registerError"));
+  clearError(document.getElementById("issueError"));
+  document.getElementById("resultBox").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+renderDeployments();
 
 var presets = [...document.querySelectorAll(".preset")];
 presets.forEach(function(p){
@@ -423,6 +532,9 @@ document.getElementById("deployBtn").addEventListener("click", async function(){
 
     document.getElementById("resultBox").classList.add("show");
     document.getElementById("managePanel").classList.add("show");
+    saveDeployment({ name: name, symbol: symbol, asset: deployedAsset, registry: log.args.registry,
+      ledger: log.args.ledger, tx: receipt.hash, time: Date.now() });
+    renderDeployments();
     btn.textContent = "Deployed ✓";
     setStep(4);
   }catch(e){
@@ -438,6 +550,7 @@ var registeredWallet = null;
 document.getElementById("registerBtn").addEventListener("click", async function(){
   var errBox = document.getElementById("registerError");
   clearError(errBox);
+  if (!signer){ await connect(); if (!signer) return; }
   var wallet = document.getElementById("holderWallet").value.trim();
   var idText = document.getElementById("holderId").value.trim();
   if (!ethers.isAddress(wallet)){ showError(errBox, "Enter a valid wallet address."); return; }
@@ -467,6 +580,7 @@ document.getElementById("registerBtn").addEventListener("click", async function(
 document.getElementById("issueBtn").addEventListener("click", async function(){
   var errBox = document.getElementById("issueError");
   clearError(errBox);
+  if (!signer){ await connect(); if (!signer) return; }
   if (!registeredWallet){ showError(errBox, "Register a holder above first."); return; }
   var amount = document.getElementById("issueAmount").value;
 

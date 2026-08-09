@@ -50,6 +50,7 @@
 .seat-item{flex:1;text-align:center}
 .seat-item .dot{aspect-ratio:1;border-radius:50%;border:2px solid var(--line);transition:background .3s var(--ease),border-color .3s var(--ease)}
 .seat-item.filled .dot{background:var(--approved);border-color:transparent}
+:root[data-theme="light"] .seat-item.filled .dot{background:var(--accent-dim)}
 .seat-item .tag-num{font-family:var(--mono);font-size:10.5px;color:var(--fg-faint);margin-top:8px}
 
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:14px}
