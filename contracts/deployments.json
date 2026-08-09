@@ -29,9 +29,21 @@
       }
     },
     "cleanverse": {
-      "atokenRequestId": "IAR20260809115822898581",
-      "atokenStatus": "ISSUED",
-      "atokenRegisterTxHash": "0x7775ccd7857df919abdb962fba52cdbba18366273a504ac2f05fadb766cbd0d7"
+      "atoken": {
+        "requestId": "IAR20260809115822898581",
+        "status": "ISSUED",
+        "registerTxHash": "0x7775ccd7857df919abdb962fba52cdbba18366273a504ac2f05fadb766cbd0d7"
+      },
+      "atokenRule": {
+        "rule": { "countries": ["SG"] },
+        "txHash": "0xdd9823b3f207ce8970c25781fbd085c5e139254b5db070fff83213be28eafaef"
+      },
+      "validator": {
+        "grantTxHash": "0x3fbebb4ab954f0fa144788f76abc84dbeb7360da4e00c3cd1a3be172a6834679",
+        "registerTxHash": "0xde9891d8b4451a3f6ea6d1d8eb96444a606d8352e00fed802541a36cf763a250",
+        "rule": { "countries": ["SG"] },
+        "registered": true
+      }
     },
     "setup": [
       {

@@ -2,6 +2,7 @@ spike/
 contracts-spike/
 node_modules/
 .env*
+!.env.example
 
 # Foundry
 contracts/out/
