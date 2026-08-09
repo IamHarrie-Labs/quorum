@@ -30,8 +30,7 @@ QuorumAsset (ERC-20, deployed by us, registered as a CVA)
          ├── PersonRegistry   resolves wallet -> personId (customerId-keyed, see below)
          ├── SeatLedger       O(1) headcount counter against the pack's cap
          └── concentration ceiling, per-person across all their wallets
-                                     (implemented and tested; DISABLED on the live
-                                      instance — see Limitations)
+                                     (live at 30% on the deployed instance)
 ```
 
 We deploy the token ourselves and register it via `register_atoken` rather than `atoken/launch` —
@@ -77,6 +76,10 @@ under one `cvRecordId`, confirmed via `query_apass_list`. `PersonRegistry` binds
   domiciled — refused on-chain with `EXEMPTION_CAPACITY_EXHAUSTED`.
 - Wallet-splitting proven live: person 1 moves value across their second and third wallets;
   `activeSeats` never moves.
+- Concentration ceiling live at 30% and enforced against the *person*: a transfer into person 1's
+  second wallet was refused on-chain with `CONCENTRATION_EXCEEDED` even though that receiving
+  wallet would have held just 12% of supply — the person behind it would have crossed 30%. A
+  smaller transfer through the same path settled. Both are real transactions.
 - Live freeze/unfreeze revocation scene against Cleanverse, described above.
 - The dashboard reads all of this directly via `ethers.js` against Monad's public RPC — no mocked
   numbers, every figure links to [MonadVision](https://testnet.monadvision.com).
@@ -90,8 +93,8 @@ software, and the gap is worth naming precisely — an overstated compliance too
 
 | Getter | Value | Meaning |
 |---|---|---|
-| `concentrationCeilingBps()` | `10000` | Concentration ceiling **disabled**. Logic is implemented and tested (including accumulation across several wallets), but the live demo enforces headcount only. |
-| `windowDays()` | `0` | Standing cap, not the rolling 12-month window s.272A specifies. The rolling path is implemented and fuzz-tested but is not what is on display. |
+| `concentrationCeilingBps()` | `3000` | Concentration ceiling **live at 30%**, and binding — person 1 currently sits at 26%. |
+| `windowDays()` | `0` | Standing cap, not the rolling 12-month window s.272A specifies. The rolling path is implemented and fuzz-tested but is not what is on display, and changing it means redeploying since it is fixed at construction. |
 | `requireAPass()` | `false` | `PersonRegistry` does not verify on-chain A-Pass possession before binding. |
 
 **The registrar is trusted, and it is the weakest joint.** Person resolution happens off-chain: a

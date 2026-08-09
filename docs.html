@@ -310,10 +310,13 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
               Cleanverse's Validator module, so this register is a participant in their compliance
               system rather than an outside caller of it. Live: <code>is_register</code> returns
               true for this contract.</li>
-            <li><b>Seat invariant.</b> Would the resulting holder set still satisfy the exemption's
-              headcount. This is the layer no per-wallet rule engine can express, because it is a
-              question about the set, not about the wallet in front of it. Live: the refusal of
-              person 6 is on-chain.</li>
+            <li><b>Seat and concentration invariant.</b> Would the resulting holder set still
+              satisfy the exemption's headcount, and would any one person end up over the
+              concentration ceiling. This is the layer no per-wallet rule engine can express,
+              because it is a question about the set, not about the wallet in front of it. Live on
+              both counts: the refusal of person 6 on headcount, and a concentration refusal where
+              the receiving wallet would have held only 12% of supply while the person behind it
+              would have crossed 30%, are each a real transaction on Monad testnet.</li>
           </ul>
           <div class="note">
             <b>Designed, not shipped: the subgroup write-back.</b> The intended fourth layer has
@@ -424,13 +427,10 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
             The live demo runs a deliberately narrow configuration, and the getters will tell you so:
           </p>
           <ul>
-            <li><code>concentrationCeilingBps = 10000</code> — the per-person concentration ceiling
-              is <b>disabled</b> on the deployed instance. The logic is implemented and covered by
-              tests, including the case where one person accumulates across several individually
-              modest wallets, but the running demo enforces headcount only.</li>
             <li><code>windowDays = 0</code> — a standing cap, not the rolling 12-month window that
               s.272A actually specifies. The rolling path is implemented and fuzz-tested, but the
-              behaviour that matters most for Singapore is not the behaviour on display.</li>
+              behaviour that matters most for Singapore is not the behaviour on display. Changing it
+              means redeploying, since it is fixed at construction.</li>
             <li><code>requireAPass = false</code> — <code>PersonRegistry</code> does not check
               on-chain A-Pass possession before binding a wallet. See the trust note below.</li>
           </ul>

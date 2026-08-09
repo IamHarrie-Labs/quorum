@@ -79,6 +79,15 @@
         ],
         "finalBalances": { "wallet1": "50", "wallet2": "30", "wallet3": "20" }
       },
+      "concentration": {
+        "note": "Ceiling enabled live at 3000bps (30%). P2 -> P1's SECOND wallet, 60 QNOTE: refused on-chain. The receiving wallet would have held only 12% of supply - unremarkable per-wallet - but person 1, summed across three wallets, would have crossed 30%. A 30 QNOTE transfer through the same path settled, leaving person 1 at 26%.",
+        "setCeilingTxHash": "0x63b1d7ce266c4a439a211603279735f3750f106edc5b704c3d6da2c44ded6068",
+        "ceilingBps": 3000,
+        "refusedTxHash": "0x7a6a566d9039ba1754034a7a0bc8bafe5a680bff913934449bb13eabd9bec906",
+        "refusedStatus": "0 (reverted on-chain, ConcentrationExceeded selector 0x184d1eb6)",
+        "settledTxHash": "0x59e5617bc75a1d14a16f81e6c953df15b7433573e7f2b2273029d5dc947f1b3d",
+        "personBalanceAfter": { "personId": 1, "tokens": "130", "pctOfSupply": 26 }
+      },
       "freezeUnfreeze": {
         "note": "P3's A-Pass frozen via update_status, seat retained (activeSeats stayed 5, holdsSeat(3)=true throughout), acquisition blocked - verify_apass returned a genuine on-chain APassNotActive revert while frozen.",
         "wallet": "0x3570D7aAFb5C6240Fd55D0e5Ea8319Ef4a5959C2",

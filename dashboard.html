@@ -332,6 +332,7 @@ var ASSET_ABI = [
   "function balanceOf(address) view returns (uint256)",
   "function totalSupply() view returns (uint256)",
   "function concentrationCeilingBps() view returns (uint16)",
+  "function personBalance(uint256) view returns (uint256)",
   "function preflight(address,address,uint256) view returns (bool,bytes32,uint32)",
   "event TransferApproved(address indexed from, address indexed to, uint256 indexed personId, uint256 value, bool seatConsumed)",
   "event TransferRefused(address indexed from, address indexed to, uint256 indexed personId, bytes32 reason)"
@@ -483,6 +484,10 @@ async function renderLog(){
   var rows = [];
   (scenes.seatsFilled.txHashes || []).forEach(function(h){ rows.push({ kind:"ok", action:"Subscription settled - seat issued", rule:"headcount, standing cap", tx:h }); });
   (scenes.walletSplit.txHashes || []).forEach(function(h){ rows.push({ kind:"ok", action:"Second wallet resolved to existing person - no seat consumed", rule:"person resolution", tx:h }); });
+  if(scenes.concentration){
+    rows.push({ kind:"ok", action:"Transfer settled into an existing person's second wallet", rule:"concentration, under ceiling", tx: scenes.concentration.settledTxHash });
+    rows.push({ kind:"no", action:"Transfer refused - person over 30% across three wallets (receiving wallet only 12%)", rule:"CONCENTRATION_EXCEEDED", tx: scenes.concentration.refusedTxHash });
+  }
   rows.push({ kind:"no", action:"Subscription refused - personId 6, room full, fully verified", rule:"EXEMPTION_CAPACITY_EXHAUSTED", tx:null, note: scenes.p6Refused.revertSelector });
 
   box.innerHTML = '<div class="log-row"><div class="log-action">Resolving ' + rows.length + ' receipts…</div></div>';
@@ -532,6 +537,32 @@ async function runPreflight(kind){
       reason || "—", seatsAfter + "/" + (await state.ledger.maxPersons()) + " persons",
       blockNum);
   }
+  if(kind === "conc"){
+    var p1c = state.cast.cast.find(function(p){ return p.key === "P1"; });
+    var p2c = state.cast.cast.find(function(p){ return p.key === "P2"; });
+    var from = p2c.wallets[0].address;
+    var toC = p1c.wallets[1].address;      // person 1's SECOND wallet
+    var big = ethers.parseEther("40");
+    var resC = await asset.preflight(from, toC, big);
+    var allowedC = resC[0], reasonC = reasonToText(resC[1]);
+
+    var supply = await asset.totalSupply();
+    var personNow = await asset.personBalance(p1c.personId);
+    var walletNow = await asset.balanceOf(toC);
+    var pctPerson = Number(((personNow + big) * 10000n) / supply) / 100;
+    var pctWallet = Number(((walletNow + big) * 10000n) / supply) / 100;
+    var ceil = Number(await asset.concentrationCeilingBps()) / 100;
+
+    showDecision(allowedC ? "ok" : "no",
+      "One person, several modest wallets, over the ceiling.",
+      "Person 2 sends 40 QNOTE to person 1's <em>second</em> wallet. That receiving wallet would " +
+      "hold " + pctWallet.toFixed(1) + "% of supply — unremarkable, and under the " + ceil.toFixed(0) +
+      "% ceiling by any per-wallet measure. Summed across every address resolving to person " +
+      p1c.personId + ", the same transfer puts one human at " + pctPerson.toFixed(1) + "%. " +
+      "Per-wallet accounting sees two modest holders. Quorum sees one.",
+      reasonC || "—", "person would hold " + pctPerson.toFixed(1) + "% · ceiling " + ceil.toFixed(0) + "%",
+      blockNum);
+  }
   if(kind === "split"){
     var p1 = state.cast.cast.find(function(p){ return p.key === "P1"; });
     var to2 = p1.wallets[1].address;
@@ -547,6 +578,7 @@ async function runPreflight(kind){
 
 var scenarios = [
   { title:"Verified investor, room full", meta:"live preflight · personId 6", key:"p6" },
+  { title:"Stake built across wallets", meta:"live preflight · concentration", key:"conc" },
   { title:"Second wallet, already-seated person", meta:"live preflight · personId 1", key:"split" }
 ];
 
