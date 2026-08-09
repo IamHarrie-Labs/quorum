@@ -675,6 +675,7 @@ async function checkOwnWallet(){
     '<p class="own-foot">Checked live at block ' + blockNum + '. Nothing signed, no gas spent.</p>' +
     '</div>'
   );
+  document.getElementById("connectBtn").textContent = "Check again";
 }
 
 document.getElementById("connectBtn").addEventListener("click", function(){
