@@ -4,6 +4,19 @@ out = "out"
 libs = ["lib"]
 remappings = ["openzeppelin-contracts/=lib/openzeppelin-contracts/"]
 
+# QuorumFactory embeds the creation code of all three contracts it deploys, which puts it over
+# EIP-170's 24576-byte limit unoptimised. It gets its own profile, optimised for size, rather than
+# turning the optimiser on globally: the registers already live on Monad were compiled with the
+# default profile, and changing that would mean the repo no longer reproduces their bytecode.
+#   FOUNDRY_PROFILE=factory forge build
+[profile.factory]
+src = "src"
+out = "out-factory"
+libs = ["lib"]
+remappings = ["openzeppelin-contracts/=lib/openzeppelin-contracts/"]
+optimizer = true
+optimizer_runs = 1
+
 [invariant]
 runs = 128
 depth = 64

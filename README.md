@@ -20,6 +20,24 @@ sale. Today this number lives in a transfer agent's spreadsheet, reconciled mont
 transfers have already settled. No chain enforces it, because a chain counts addresses, and one
 person opens fifty addresses in an afternoon.
 
+## Adoption — you do not need us to deploy this
+
+An already-deployed plain ERC-20 cannot be retrofitted; its bytecode is immutable. Everything below
+routes around that instead of pretending otherwise.
+
+- **Self-serve issuance.** `QuorumFactory` deploys a fully-wired register in one transaction, and
+  the caller owns it — the factory holds no authority of its own. Live proof: a wallet unconnected
+  to anything else on this site called `deploy()` with Singapore's real parameters (50 persons,
+  365-day rolling window, 30% ceiling), and our own deployer key was refused with
+  `NotRegisterOwner` when it tried to touch that register through the factory. See `factory` in
+  `contracts/deployments.json`.
+- **Zero-integration adoption for an existing A-Token.** The layer-4 write-back (below) doubles as
+  an adoption path: point Quorum's resolver at an already-registered A-Token, add one rule
+  (`allowed_sub_group: "QS"`), and it gains person-level headcount enforcement with no contract
+  changes at all.
+- **`preflight()`** is a free, permissionless `eth_call` for anyone who wants an answer without
+  integrating anything.
+
 ## The architecture
 
 ```

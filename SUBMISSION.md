@@ -79,6 +79,13 @@ testnet, linked from the site and listed in `contracts/deployments.json`.
   blocks acquisition, not existing holding. Unfreezing recovers.
 - 17 Foundry tests including fuzz invariants asserting `activeSeats` never exceeds the cap or the
   number of distinct persons, over 8,192 randomised calls each.
+- **Self-serve adoption:** `QuorumFactory` lets any wallet deploy its own fully-wired register in
+  one transaction and own it outright. A wallet with no connection to anything else in this
+  submission deployed a register through the factory with Singapore's real parameters (50 persons,
+  365-day rolling window, 30% ceiling) — not the demo's narrowed pack. Our own deployer key then
+  tried to act on that register through the factory and was refused on-chain with
+  `NotRegisterOwner`. 6 additional Foundry tests cover this, including the factory acting on its
+  own deployments.
 
 The docs include a **Verify it yourself** section: copy-pasteable `cast` commands that reproduce
 every number above directly against Monad, plus the `verify_apass` call that refuses person 6 using
@@ -100,6 +107,7 @@ none of our code.
 QuorumAsset     0x26B57c58C20C171233e15c73fA1bD814b269dD88   (A-Token + Validator pool)
 PersonRegistry  0xf0D3a94fEb9decdF738Db37e11645C40f69Dad50
 SeatLedger      0x5f80999D2e449479E3765f81666A245135de0aca
+QuorumFactory   0x385c692d7AAC898FEdDb7282B1860318CD47bD30   (self-serve deployment)
 ```
 
 ## What this is not

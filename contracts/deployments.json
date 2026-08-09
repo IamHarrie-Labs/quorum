@@ -54,6 +54,26 @@
         "txHash": "0x4b5fad6b4c7a0ae068f04ce3cf5359f89792a00a3fff59256d01f40bfbec1c9c"
       }
     ],
+    "factory": {
+      "note": "Self-serve deployment: any wallet calls deploy() and owns the result. The Quorum deployer never signs, never holds a key on it, and is provably locked out - confirmed by trying and getting NotRegisterOwner back.",
+      "address": "0x385c692d7AAC898FEdDb7282B1860318CD47bD30",
+      "deployTxHash": "not captured in script output - deployed via forge script --broadcast, code verified present",
+      "compiledWith": "FOUNDRY_PROFILE=factory (optimizer on, size-optimised - the factory embeds all three children's creation code and exceeds EIP-170 unoptimised at the default profile's settings)",
+      "demoRegister": {
+        "note": "Deployed by a fresh, unrelated wallet (0x0cd1...F047) with Singapore's real parameters, not the demo's narrowed ones - proof this isn't just self-serve for the specific 5-seat pack shown elsewhere on this site.",
+        "deployTxHash": "0xeec2d6903a788d304b3322fe3b5a63d8983a5dcb5704c38ec2c989cfd816a7cc",
+        "deployedBy": "0x0cd1f5FF80d8cd9038C38f7240b9eDaaa24DF047",
+        "asset": "0xdDBD97d385f5cB2E03A2654d998c724A8dB91e20",
+        "registry": "0x16368A2270626B03208036Ae51d7c1f98EE4620F",
+        "ledger": "0xC91c249219EB324669490817acb05D518758952C",
+        "config": { "name": "Acme Series A", "maxPersons": 50, "windowDays": 365, "concentrationCeilingBps": 3000 },
+        "lockoutProof": {
+          "note": "The Quorum deployer (0xb84b...1A06, the wallet behind every other tx on this site) called factory.issue() on this register and was refused on-chain.",
+          "revertSelector": "0xfe8f4389",
+          "revertReason": "NotRegisterOwner"
+        }
+      }
+    },
     "demoScenes": {
       "seatsFilled": {
         "note": "P1-P5 issued 100 QNOTE each, real transactions",

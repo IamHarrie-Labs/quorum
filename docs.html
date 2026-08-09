@@ -429,43 +429,69 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
         <div class="prose">
           <p>
             Quorum is not a hosted service. There is no API key to request and nothing to sign up
-            for. It is three contracts you deploy, plus an off-chain resolver that binds wallets to
-            persons. That distinction matters, so here is what integrating actually means, in the
-            three shapes it can take.
+            for. Adoption has one hard constraint worth stating before anything else: <b>an already
+            -deployed plain ERC-20 cannot be retrofitted.</b> Its bytecode is immutable, there is no
+            hook to add, and no amount of dashboard tooling changes that. Every path below routes
+            around that fact rather than pretending it isn't there.
           </p>
 
-          <h4>1. Issue through Quorum</h4>
+          <h4>1. Self-serve issuance, no one's permission required</h4>
           <p>
-            The path the live demo takes. You deploy <code>QuorumAsset</code> as the security
-            itself, and the check lives in the ERC-20 <code>_update()</code> hook — the function
-            every mint, transfer and burn in OpenZeppelin v5 routes through. There is no code path
-            that moves the token without passing the cap check, which is the property that makes
-            this enforcement rather than a policy document.
+            <code>QuorumFactory</code> deploys a complete register — <code>PersonRegistry</code>,
+            <code>SeatLedger</code>, <code>QuorumAsset</code>, fully wired — in one transaction, and
+            the caller owns all of it. We do not hold a key on it and cannot act on it: every
+            owner-only call the factory routes is gated to the wallet that deployed that specific
+            register, checked on every call, not just at deployment.
           </p>
           <div class="codeblock">
-<span class="c">// deploy the register, then the asset that enforces against it</span>
-registry = <span class="k">new</span> PersonRegistry(APASS_ADDRESS);
-ledger   = <span class="k">new</span> SeatLedger(<span class="k">50</span>, <span class="k">365</span>);  <span class="c">// SFA s.272A: 50 persons / 12 months</span>
-asset    = <span class="k">new</span> QuorumAsset(<span class="k">"Note"</span>, <span class="k">"NOTE"</span>, registry, ledger, <span class="k">3000</span>);
-ledger.setOperator(<span class="k">address</span>(asset), <span class="k">true</span>);
+factory.deploy(
+    <span class="k">"Acme Series A"</span>, <span class="k">"ACME"</span>,
+    <span class="k">50</span>,     <span class="c">// maxPersons - SFA s.272A</span>
+    <span class="k">365</span>,    <span class="c">// windowDays - rolling 12-month window</span>
+    <span class="k">3000</span>,   <span class="c">// concentrationCeilingBps - 30%</span>
+    APASS_ADDRESS
+);
+<span class="c">// returns (asset, registry, ledger) - you own all three from this call onward</span>
           </div>
-
-          <h4>2. Keep your token, add the register</h4>
           <p>
-            <code>SeatLedger</code> is deliberately a separate contract that knows nothing about any
-            particular asset, so an existing token can call it from its own transfer hook. This is
-            the intended path for an issuer who already has a token they cannot redeploy. It follows
-            from the design rather than being demonstrated by it — we have not shipped a worked
-            example, so treat it as sound in principle and unproven in practice.
+            Live, not theoretical: a wallet unconnected to any address elsewhere on this site
+            deployed <code>Acme Series A</code> through the factory with Singapore's real
+            parameters — 50 persons, a rolling year, a 30% ceiling — while this demo runs its
+            narrower 5-seat pack. Our own deployer then called <code>factory.issue()</code> against
+            that register and was refused on-chain with <code>NotRegisterOwner</code>. Addresses and
+            the failed transaction are in <code>contracts/deployments.json</code> under
+            <code>factory</code>.
           </p>
 
-          <h4>3. Ask without integrating at all</h4>
+          <h4>2. Adopt without deploying anything — the one for an existing A-Token</h4>
+          <p>
+            This is the layer 4 write-back, read as an integration path rather than a demo scene,
+            and it is the answer for a Cleanverse A-Token that already exists. Point Quorum's
+            resolver at it, call <code>add_rule</code> with <code>allowed_sub_group: "QS"</code> —
+            one API call — and the token gains person-level headcount enforcement with zero
+            contract changes, because the enforcement runs inside Cleanverse's engine, not inside
+            the token. Every A-Token already registered in this sandbox is reachable this way today.
+            Two honest limits: it is eventually consistent, not atomic, since there is a window
+            between a transfer and the tag update; and it enforces "is this person seated" rather
+            than evaluating each transfer's effect on the cap in the same transaction the way the
+            hook-based paths do.
+          </p>
+
+          <h4>3. Wrap an existing token</h4>
+          <p>
+            For a plain ERC-20 with no A-Token to begin with: deposit the original, receive a
+            <code>QuorumAsset</code>-shaped wrapper that carries the hook, the same pattern WETH
+            uses for ETH. The restricted register lives at the wrapper layer, deployable through the
+            same factory. Designed, not built in the window — sound by the same reasoning as (1),
+            unproven the same way (2) was before we ran it.
+          </p>
+
+          <h4>4. Ask without integrating at all</h4>
           <p>
             <code>preflight()</code> is a <code>view</code> function, so anyone can call it for free
-            over <code>eth_call</code> — your backend, a transfer agent's dashboard, another
-            protocol, or a judge with a terminal. It runs the identical evaluation the transfer hook
-            runs, against live state, and submits nothing. This is the closest thing Quorum has to
-            an API, and it needs no permission.
+            over <code>eth_call</code> — a transfer agent's existing dashboard, another protocol, or
+            a judge with a terminal. It runs the identical evaluation the transfer hook runs, against
+            live state, and submits nothing.
           </p>
           <div class="codeblock">
 <span class="c">// (allowed, reason, seatsAfter) — the same answer the hook would give</span>
