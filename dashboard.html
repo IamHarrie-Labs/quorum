@@ -126,10 +126,26 @@
 .log-status .s.no{color:var(--refused)}
 .log-status a{font-family:var(--mono);font-size:11px;color:var(--accent)}
 
+.own-note{font-size:12.5px;color:var(--fg-faint);line-height:1.55;margin-top:14px}
+.own-card{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-control);padding:14px 15px}
+.own-row{display:flex;justify-content:space-between;gap:14px;align-items:baseline;
+  padding:7px 0;border-bottom:1px solid var(--line-soft)}
+.own-row:last-of-type{border-bottom:none}
+.own-row .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--fg-faint);flex:none}
+.own-row .v{font-family:var(--mono);font-size:12px;color:var(--fg);text-align:right;word-break:break-word}
+.own-row .v.ok{color:var(--approved)}
+.own-row .v.no{color:var(--refused)}
+.own-explain{font-size:12.5px;color:var(--fg-dim);line-height:1.6;margin:13px 0 0;
+  padding-top:12px;border-top:1px solid var(--line-soft)}
+.own-foot{font-family:var(--mono);font-size:10.5px;color:var(--fg-faint);margin:10px 0 0}
+
 @media(max-width:640px){
   .seat-count-row{flex-wrap:wrap}
   .seat-status{margin-left:0;text-align:left}
   .kpis{grid-template-columns:1fr}
+  .own-row{flex-direction:column;gap:3px}
+  .own-row .v{text-align:left}
 }
 </style>
 </head>
@@ -237,6 +253,16 @@
           <button class="reset-link" id="resetBtn" type="button">Reset offering state</button>
         </div>
 
+        <div class="panel scenario-panel">
+          <div class="panel-label">Check your own wallet</div>
+          <p>
+            Read-only. Nothing is signed, no gas is spent, and you do not need Monad testnet added
+            to your wallet — Quorum reads your address against the live register on our RPC.
+          </p>
+          <button class="btn btn-primary" id="connectBtn" type="button" style="width:100%">Connect wallet</button>
+          <div id="ownWalletResult"></div>
+        </div>
+
         <div class="decision" id="decision" role="status" aria-live="polite"></div>
       </div>
     </div>
@@ -310,6 +336,10 @@ var ASSET_ABI = [
   "event TransferApproved(address indexed from, address indexed to, uint256 indexed personId, uint256 value, bool seatConsumed)",
   "event TransferRefused(address indexed from, address indexed to, uint256 indexed personId, bytes32 reason)"
 ];
+var REGISTRY_ABI = [
+  "function personOf(address) view returns (uint256)",
+  "function walletCount(uint256) view returns (uint32)"
+];
 
 // batchMaxCount:1 disables JSON-RPC request batching - Monad's testnet endpoint appears to
 // reject batched eth_getLogs calls whose combined range exceeds 100 blocks, even though each
@@ -347,7 +377,8 @@ async function loadLive(){
   var addrs = state.deployments.contracts;
   var ledger = new ethers.Contract(addrs.SeatLedger.address, LEDGER_ABI, provider);
   var asset = new ethers.Contract(addrs.QuorumAsset.address, ASSET_ABI, provider);
-  state.ledger = ledger; state.asset = asset;
+  var registry = new ethers.Contract(addrs.PersonRegistry.address, REGISTRY_ABI, provider);
+  state.ledger = ledger; state.asset = asset; state.registry = registry;
 
   var cap = await ledger.maxPersons();
   var active = await ledger.activeSeats();
@@ -525,6 +556,79 @@ document.getElementById("resetBtn").addEventListener("click", function(){
   document.getElementById("decision").className = "decision";
   document.getElementById("decision").innerHTML = "";
   loadLive().catch(function(e){ console.error(e); setStatus("failed to reload — see console"); });
+});
+
+// Check-your-own-wallet. Deliberately read-only: we ask the wallet for its address and nothing
+// else - no signature, no transaction, no network switch. Every read below goes through our own
+// Monad RPC, so it works regardless of which chain the visitor's wallet is pointed at.
+function renderOwnWallet(html){
+  document.getElementById("ownWalletResult").innerHTML = html;
+}
+
+async function checkOwnWallet(){
+  if(!window.ethereum){
+    renderOwnWallet('<div class="own-note">No browser wallet detected. You can still read the ' +
+      'register above — every figure on this page is a live call and needs no wallet at all.</div>');
+    return;
+  }
+
+  renderOwnWallet('<div class="own-note">Awaiting wallet…</div>');
+  var accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+  var addr = accounts && accounts[0];
+  if(!addr){ renderOwnWallet('<div class="own-note">No account returned.</div>'); return; }
+
+  renderOwnWallet('<div class="own-note">Reading ' + short(addr) + ' against the live register…</div>');
+
+  var personId = await state.registry.personOf(addr);
+  var blockNum = await provider.getBlockNumber();
+  var known = personId > 0n;
+
+  var rows = "";
+  rows += '<div class="own-row"><span class="k">Address</span><a class="v" href="' + addrLink(addr) +
+          '" target="_blank" rel="noopener">' + short(addr) + ' ↗</a></div>';
+  rows += '<div class="own-row"><span class="k">Resolves to person</span><span class="v">' +
+          (known ? "personId " + personId : "not registered") + '</span></div>';
+
+  if(known){
+    var wc = await state.registry.walletCount(personId);
+    var seated = await state.ledger.holdsSeat(personId);
+    rows += '<div class="own-row"><span class="k">Wallets on this person</span><span class="v">' + wc + '</span></div>';
+    rows += '<div class="own-row"><span class="k">Holds a seat</span><span class="v">' + (seated ? "yes" : "no") + '</span></div>';
+  }
+
+  var res = await state.asset.preflight("0x0000000000000000000000000000000000000000", addr, ethers.parseEther("10"));
+  var allowed = res[0], reason = reasonToText(res[1]);
+  rows += '<div class="own-row"><span class="k">Preflight verdict</span><span class="v ' + (allowed ? "ok" : "no") + '">' +
+          (allowed ? "would settle" : "would refuse") + '</span></div>';
+  rows += '<div class="own-row"><span class="k">Reason code</span><span class="v">' + (reason || "—") + '</span></div>';
+
+  var explain;
+  if(!known){
+    explain = "Your wallet has no A-Pass in this offering, so Quorum cannot resolve it to a person " +
+      "and refuses before any balance moves. That refusal is the whole point: identity is a " +
+      "precondition, not an afterthought. A real issuer would onboard you through Cleanverse first.";
+  } else if(allowed){
+    explain = "Your wallet resolves to a person already known to this register, and admitting this " +
+      "transfer would keep the holder base inside every rule the pack enforces.";
+  } else {
+    explain = "Your wallet resolves to a known person, but the resulting state of the cap table " +
+      "would breach the rule named above, so the transfer is refused before it settles.";
+  }
+
+  renderOwnWallet(
+    '<div class="own-card">' + rows +
+    '<p class="own-explain">' + explain + '</p>' +
+    '<p class="own-foot">Live eth_call at block ' + blockNum + '. Nothing signed, no gas spent.</p>' +
+    '</div>'
+  );
+}
+
+document.getElementById("connectBtn").addEventListener("click", function(){
+  checkOwnWallet().catch(function(e){
+    console.error(e);
+    var msg = e && (e.shortMessage || e.message) ? (e.shortMessage || e.message) : String(e);
+    renderOwnWallet('<div class="own-note">Could not complete the check: ' + msg + '</div>');
+  });
 });
 
 (async function boot(){
