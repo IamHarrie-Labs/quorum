@@ -411,8 +411,15 @@ async function loadLive(){
   document.getElementById("kpiWallets").textContent = persons.reduce(function(n,p){return n+p.wallets.length;},0).toString();
   var maxPct = persons.reduce(function(m,p){ return Math.max(m,p.pct); }, 0);
   document.getElementById("kpiConc").textContent = maxPct.toFixed(1) + "%";
+  // 10000bps is the contract's "off" sentinel. Rendering it as "ceiling 100%" would read like a
+  // configured limit rather than a disabled rule, which is the kind of small dishonesty a
+  // compliance dashboard cannot afford.
   var kpiConcSub = document.querySelector('#kpiConc').parentElement.querySelector('.sub');
-  if(kpiConcSub) kpiConcSub.textContent = "ceiling " + (Number(ceilingBps)/100).toFixed(0) + "%";
+  if(kpiConcSub){
+    kpiConcSub.textContent = Number(ceilingBps) >= 10000
+      ? "ceiling disabled on this instance"
+      : "ceiling " + (Number(ceilingBps)/100).toFixed(0) + "%";
+  }
 
   renderSeats(Number(active), Number(cap));
   renderHolders();

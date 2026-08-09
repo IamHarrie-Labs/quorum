@@ -44,6 +44,8 @@
 .doc-section h3{font-size:16px;font-weight:600;margin:26px 0 10px;color:var(--fg)}
 .doc-section .prose{max-width:68ch}
 .doc-section .prose p{margin-bottom:14px}
+.doc-section .prose > h4{font-size:14.5px;font-weight:500;color:var(--fg);margin:26px 0 10px}
+.doc-section .prose > h4:first-child{margin-top:0}
 .doc-section .prose ul{margin:0 0 14px;padding-left:20px;color:var(--fg-dim)}
 .doc-section .prose li{margin-bottom:7px;line-height:1.6}
 .doc-section .prose li::marker{color:var(--accent)}
@@ -296,25 +298,32 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
         <h2>Enforcement layers</h2>
         <div class="prose">
           <p>
-            A transfer through <code>QuorumAsset</code> passes four checks. Three of them belong to
-            Cleanverse. Only the fourth is Quorum's own, and it exists precisely because the other
-            three cannot express it.
+            A transfer through <code>QuorumAsset</code> passes three checks that are live today.
+            Two of them belong to Cleanverse. The third is Quorum's own, and it exists precisely
+            because the other two cannot express it.
           </p>
           <ul>
             <li><b>A-Token compliance rule.</b> Cleanverse checks the recipient's verification tier
-              and jurisdiction against the asset's own rule set.</li>
+              and jurisdiction against the asset's own rule set. Live: a Singapore country rule is
+              registered against this A-Token.</li>
             <li><b>Validator pool rule.</b> Quorum registers itself as a compliance pool with
               Cleanverse's Validator module, so this register is a participant in their compliance
-              system rather than an outside caller of it.</li>
-            <li><b>Seat and concentration invariant.</b> Would the resulting holder set still
-              satisfy the exemption's headcount, and would any one person end up over the
-              concentration ceiling. This is the layer no per-wallet rule engine can express,
-              because it is a question about the set, not about the wallet in front of it.</li>
-            <li><b>The subgroup write-back.</b> Quorum writes its seat decision back into the
-              person's A-Pass as a subgroup tag. An A-Token rule requiring that tag means an
-              unseated wallet is refused by <em>Cleanverse's own check</em>, evaluated independently
-              of Quorum's contract. Two systems reach the same refusal from different directions.</li>
+              system rather than an outside caller of it. Live: <code>is_register</code> returns
+              true for this contract.</li>
+            <li><b>Seat invariant.</b> Would the resulting holder set still satisfy the exemption's
+              headcount. This is the layer no per-wallet rule engine can express, because it is a
+              question about the set, not about the wallet in front of it. Live: the refusal of
+              person 6 is on-chain.</li>
           </ul>
+          <div class="note">
+            <b>Designed, not shipped: the subgroup write-back.</b> The intended fourth layer has
+            Quorum write its seat decision back into the person's A-Pass as a subgroup tag, so that
+            an A-Token rule requiring that tag would make <em>Cleanverse's own engine</em> refuse an
+            unseated wallet, independently of Quorum's contract — two systems reaching the same
+            refusal from different directions. The write path was spiked but not completed inside
+            the build window, and it is not part of the running system. It is described here
+            because it is the natural next step, not because it exists.
+          </div>
           <div class="note">
             <b>Why this matters for the integration.</b> Remove Cleanverse from this design and
             there is no credential to resolve a wallet to a person with, which means there is
@@ -394,22 +403,73 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
         <h2>What this doesn't claim</h2>
         <div class="prose">
           <p>
-            A system that only states what it gets right is not one worth trusting. Two limits,
-            stated plainly rather than buried.
+            This is a working proof that the architecture holds on live infrastructure. It is not a
+            production system, and the difference is worth being specific about — a compliance tool
+            that overstates itself is worse than no compliance tool, because someone might believe
+            it.
           </p>
+
+          <h4>The legal mapping is approximate</h4>
           <p>
             Singapore's s.272A counts <em>offerees</em>, people an offer was made to, whether or
             not they bought in. Quorum counts <em>holders</em>, since a holder is the strictest
             thing a smart contract can actually observe on-chain. An offer that was made and
             declined is invisible to any blockchain. Reg D's 35-purchaser limit counts purchasers,
             which maps onto holders exactly, so that mapping is closer to exact than the Singapore
-            one.
+            one. No securities counsel has reviewed any of these mappings.
           </p>
+
+          <h4>What the deployed contract actually has switched on</h4>
           <p>
-            Everything here runs on Monad testnet against Cleanverse's sandbox environment, which
-            every team in this hackathon shares. It is a demonstration of the mechanism, not a
-            production deployment, and it should be judged as one.
+            The live demo runs a deliberately narrow configuration, and the getters will tell you so:
           </p>
+          <ul>
+            <li><code>concentrationCeilingBps = 10000</code> — the per-person concentration ceiling
+              is <b>disabled</b> on the deployed instance. The logic is implemented and covered by
+              tests, including the case where one person accumulates across several individually
+              modest wallets, but the running demo enforces headcount only.</li>
+            <li><code>windowDays = 0</code> — a standing cap, not the rolling 12-month window that
+              s.272A actually specifies. The rolling path is implemented and fuzz-tested, but the
+              behaviour that matters most for Singapore is not the behaviour on display.</li>
+            <li><code>requireAPass = false</code> — <code>PersonRegistry</code> does not check
+              on-chain A-Pass possession before binding a wallet. See the trust note below.</li>
+          </ul>
+
+          <h4>The registrar is trusted, and that is the weakest joint</h4>
+          <p>
+            Person resolution happens off-chain: a script reads <code>customerId</code> from
+            Cleanverse and writes <code>keccak256(customerId)</code> into the registry under a
+            registrar key. The contract cannot verify that mapping. A compromised or careless
+            registrar could bind two wallets to one person who are not the same human, or split one
+            human across two person IDs, and the seat count would be wrong in a way the invariant
+            cannot detect — the invariant guarantees the count is consistent, not that it is true.
+            Closing this properly means either an on-chain A-Pass check with a real per-wallet
+            identity signal, or an attestation signed by Cleanverse that the contract can verify.
+            Neither exists here.
+          </p>
+
+          <h4>Everything else that a production deployment would need</h4>
+          <ul>
+            <li>No security audit. The contracts have not been reviewed by anyone but their author.</li>
+            <li>Deployed from a single burner key with no multisig, timelock, or upgrade path.</li>
+            <li>Off-chain identity resolution is a set of manual scripts, not a monitored service
+              with retries, alerting, or reconciliation.</li>
+            <li>Cleanverse's API is an unhandled single point of failure. If it is down, new people
+              cannot be resolved. The contract keeps enforcing on already-bound state, which is the
+              right failure mode, but nothing is degraded gracefully by design.</li>
+            <li>The demo identities are fictional people registered against a shared sandbox. The
+              credentials are real API objects; the humans are not.</li>
+            <li>No issuer-facing interface. Rule packs are constructor arguments, not a product.</li>
+          </ul>
+
+          <div class="note">
+            <b>What is genuinely proven.</b> That a contract you deploy yourself can be registered
+            as a Cleanverse A-Token and a Validator pool simultaneously while keeping its own
+            transfer hook; that person-level headcount can be enforced inside that hook at O(1);
+            that wallet-splitting fails against it; and that a credential frozen through Cleanverse
+            changes the verdict on a live wallet. Every one of those is a real transaction on Monad
+            testnet, linked from the dashboard.
+          </div>
         </div>
       </section>
 

@@ -29,7 +29,9 @@ QuorumAsset (ERC-20, deployed by us, registered as a CVA)
    └── _update() hook runs a set-level check on every transfer
          ├── PersonRegistry   resolves wallet -> personId (customerId-keyed, see below)
          ├── SeatLedger       O(1) headcount counter against the pack's cap
-         └── concentration ceiling, evaluated per-person across all their wallets
+         └── concentration ceiling, per-person across all their wallets
+                                     (implemented and tested; DISABLED on the live
+                                      instance — see Limitations)
 ```
 
 We deploy the token ourselves and register it via `register_atoken` rather than `atoken/launch` —
@@ -78,6 +80,44 @@ under one `cvRecordId`, confirmed via `query_apass_list`. `PersonRegistry` binds
 - Live freeze/unfreeze revocation scene against Cleanverse, described above.
 - The dashboard reads all of this directly via `ethers.js` against Monad's public RPC — no mocked
   numbers, every figure links to [MonadVision](https://testnet.monadvision.com).
+
+## Limitations
+
+This is a working proof that the architecture holds on live infrastructure. It is not production
+software, and the gap is worth naming precisely — an overstated compliance tool is worse than none.
+
+**What the deployed instance actually has switched on.** Call the getters and you will find:
+
+| Getter | Value | Meaning |
+|---|---|---|
+| `concentrationCeilingBps()` | `10000` | Concentration ceiling **disabled**. Logic is implemented and tested (including accumulation across several wallets), but the live demo enforces headcount only. |
+| `windowDays()` | `0` | Standing cap, not the rolling 12-month window s.272A specifies. The rolling path is implemented and fuzz-tested but is not what is on display. |
+| `requireAPass()` | `false` | `PersonRegistry` does not verify on-chain A-Pass possession before binding. |
+
+**The registrar is trusted, and it is the weakest joint.** Person resolution happens off-chain: a
+script reads `customerId` from Cleanverse and writes `keccak256(customerId)` into the registry under
+a registrar key. The contract cannot verify that mapping. A compromised registrar could bind two
+wallets to one person who are not the same human, and the invariant would not catch it — the
+invariant guarantees the count is *consistent*, not that it is *true*. Closing this needs either a
+real per-wallet on-chain identity signal or a Cleanverse-signed attestation the contract can verify.
+Neither exists here.
+
+**The subgroup write-back was designed but not shipped.** The intended fourth enforcement layer —
+Quorum writing its seat decision back into the A-Pass `subGroup` so Cleanverse's own engine refuses
+unseated wallets independently — was spiked but not completed in the window. `docs.html` describes
+it as future work, not as a running feature.
+
+**Everything else a production deployment would need:** no security audit; single burner deployer
+key with no multisig, timelock, or upgrade path; identity resolution is manual scripts rather than a
+monitored service; Cleanverse's API is an unhandled single point of failure; the demo identities are
+fictional people against a shared sandbox; and no securities counsel has reviewed the per-jurisdiction
+legal mappings. The offeree-vs-holder gap for s.272A is discussed in `docs.html`.
+
+**What is genuinely proven:** that a self-deployed contract can be both a registered A-Token and a
+registered Validator pool while keeping its own transfer hook; that person-level headcount can be
+enforced inside that hook at O(1); that wallet-splitting fails against it; and that a credential
+frozen through Cleanverse changes the verdict on a live wallet. Each of those is a real Monad
+testnet transaction, linked from the dashboard.
 
 ## Repo layout
 
