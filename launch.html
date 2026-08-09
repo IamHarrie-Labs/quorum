@@ -208,17 +208,30 @@
         <div class="addr-row"><span>Deploy tx</span><a id="rTx" href="#" target="_blank" rel="noopener"></a></div>
 
         <div class="manage" id="managePanel">
-          <h4>Issue to your first holder</h4>
+          <h4>Bring in your first holder</h4>
+          <p style="font-size:12.5px;color:var(--fg-faint);line-height:1.6;margin-bottom:16px">
+            Two steps. First you register who they are, then you can send them something. In a real
+            rollout, step one happens after they've gone through Cleanverse's identity check; here
+            we skip straight to it to keep the demo moving.
+          </p>
+
           <div class="field-row">
-            <label>Recipient wallet</label>
-            <input type="text" id="issueTo" placeholder="0x…">
-            <div class="hint">They'll need a Cleanverse identity check done first, or this will fail. We're skipping that step here to keep the demo short; a real issuer would run it before issuing anything.</div>
+            <label>Their wallet</label>
+            <input type="text" id="holderWallet" placeholder="0x…">
           </div>
           <div class="field-row">
-            <label>Amount</label>
+            <label>Person identifier</label>
+            <input type="text" id="holderId" placeholder="e.g. their Cleanverse customer ID">
+            <div class="hint">One person can have several wallets. Use the same identifier for all of them and Quorum treats them as one holder, no matter how many addresses they use.</div>
+          </div>
+          <button class="btn btn-ghost" id="registerBtn" type="button">Register holder</button>
+          <div class="error" id="registerError"></div>
+
+          <div class="field-row" style="margin-top:20px">
+            <label>Amount to send</label>
             <input type="number" id="issueAmount" value="100">
           </div>
-          <button class="btn btn-ghost" id="issueBtn" type="button">Issue</button>
+          <button class="btn btn-primary" id="issueBtn" type="button" disabled>Register a holder first</button>
           <div class="error" id="issueError"></div>
         </div>
       </div>
@@ -284,8 +297,14 @@ var FACTORY_ABI = [
   "function issue(address,address,uint256)",
   "event RegisterDeployed(address indexed owner, address indexed asset, address registry, address ledger, uint32 maxPersons, uint32 windowDays, uint16 concentrationCeilingBps)"
 ];
+// bind() lives on PersonRegistry directly, not routed through the factory - the factory grants
+// the deploying wallet registrar rights on its own register so this call needs no factory hop.
+var REGISTRY_ABI = [
+  "function bind(address wallet, bytes32 kycHash) returns (uint256 personId)",
+  "function personOf(address) view returns (uint256)"
+];
 
-var provider = null, signer = null, deployedAsset = null;
+var provider = null, signer = null, deployedAsset = null, deployedRegistry = null;
 
 function short(a){ return a.slice(0,6) + "…" + a.slice(-4); }
 function setStep(n){
@@ -381,6 +400,7 @@ document.getElementById("deployBtn").addEventListener("click", async function(){
     }).find(function(l){ return l && l.name === "RegisterDeployed"; });
 
     deployedAsset = log.args.asset;
+    deployedRegistry = log.args.registry;
     document.getElementById("rAsset").textContent = deployedAsset;
     document.getElementById("rAsset").href = EXPLORER + "/address/" + deployedAsset;
     document.getElementById("rRegistry").textContent = log.args.registry;
@@ -402,25 +422,57 @@ document.getElementById("deployBtn").addEventListener("click", async function(){
   }
 });
 
+var registeredWallet = null;
+
+document.getElementById("registerBtn").addEventListener("click", async function(){
+  var errBox = document.getElementById("registerError");
+  clearError(errBox);
+  var wallet = document.getElementById("holderWallet").value.trim();
+  var idText = document.getElementById("holderId").value.trim();
+  if (!ethers.isAddress(wallet)){ showError(errBox, "Enter a valid wallet address."); return; }
+  if (!idText){ showError(errBox, "Give this person an identifier, anything unique to them."); return; }
+
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = "Confirm in your wallet…";
+  try{
+    var registry = new ethers.Contract(deployedRegistry, REGISTRY_ABI, signer);
+    var personHash = ethers.keccak256(ethers.toUtf8Bytes(idText));
+    var tx = await registry.bind(wallet, personHash);
+    btn.textContent = "Registering…";
+    await tx.wait();
+    btn.textContent = "Registered ✓";
+    registeredWallet = wallet;
+    var issueBtn = document.getElementById("issueBtn");
+    issueBtn.disabled = false;
+    issueBtn.textContent = "Send to " + short(wallet);
+  }catch(e){
+    showError(errBox, e.shortMessage || e.message);
+    btn.textContent = "Register holder";
+  }
+  btn.disabled = false;
+});
+
 document.getElementById("issueBtn").addEventListener("click", async function(){
   var errBox = document.getElementById("issueError");
   clearError(errBox);
-  var to = document.getElementById("issueTo").value.trim();
+  if (!registeredWallet){ showError(errBox, "Register a holder above first."); return; }
   var amount = document.getElementById("issueAmount").value;
-  if (!ethers.isAddress(to)){ showError(errBox, "Enter a valid wallet address."); return; }
 
   var btn = this;
   btn.disabled = true;
   btn.textContent = "Confirm in your wallet…";
   try{
     var factory = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
-    var tx = await factory.issue(deployedAsset, to, ethers.parseEther(amount || "0"));
-    btn.textContent = "Issuing…";
+    var tx = await factory.issue(deployedAsset, registeredWallet, ethers.parseEther(amount || "0"));
+    btn.textContent = "Sending…";
     await tx.wait();
-    btn.textContent = "Issued ✓";
+    btn.textContent = "Sent ✓";
   }catch(e){
     showError(errBox, e.shortMessage || e.message);
-    btn.textContent = "Issue";
+    btn.disabled = false;
+    btn.textContent = "Send to " + short(registeredWallet);
+    return;
   }
   btn.disabled = false;
 });
