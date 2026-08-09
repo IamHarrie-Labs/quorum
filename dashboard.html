@@ -50,7 +50,7 @@
 .seat-item{flex:1;text-align:center}
 .seat-item .dot{aspect-ratio:1;border-radius:50%;border:2px solid var(--line);transition:background .3s var(--ease),border-color .3s var(--ease)}
 .seat-item.filled .dot{background:var(--approved);border-color:transparent}
-:root[data-theme="light"] .seat-item.filled .dot{background:var(--accent-dim)}
+:root[data-theme="dark"] .seat-item.filled .dot{background:var(--accent)}
 .seat-item .tag-num{font-family:var(--mono);font-size:10.5px;color:var(--fg-faint);margin-top:8px}
 
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -187,7 +187,6 @@
           <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"/>
         </svg>
       </button>
-      <a class="btn btn-primary" href="launch.html">Launch your own</a>
     </nav>
   </div>
 </header>
@@ -199,9 +198,12 @@
         <div class="dash-eyebrow">Offering</div>
         <h1>Quorum Note</h1>
       </div>
-      <div class="tags">
-        <span class="tag gold">sg_sfa_272a</span>
-        <span class="tag">demo cap 5</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px">
+        <div class="tags">
+          <span class="tag gold">sg_sfa_272a</span>
+          <span class="tag">demo cap 5</span>
+        </div>
+        <a class="btn btn-ghost" href="launch.html" style="font-size:12.5px;padding:8px 15px">Launch your own register</a>
       </div>
     </div>
   </div>
