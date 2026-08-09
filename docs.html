@@ -141,6 +141,8 @@
       <a href="#layers">Enforcement layers</a>
       <a href="#rulepacks">Rule packs</a>
       <a href="#cleanverse">Cleanverse integration</a>
+      <a href="#integrate">Integrating Quorum</a>
+      <a href="#verify">Verify it yourself</a>
       <a href="#limits">What this doesn't claim</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -422,6 +424,157 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
         </div>
       </section>
 
+      <section class="doc-section" id="integrate">
+        <h2>Integrating Quorum</h2>
+        <div class="prose">
+          <p>
+            Quorum is not a hosted service. There is no API key to request and nothing to sign up
+            for. It is three contracts you deploy, plus an off-chain resolver that binds wallets to
+            persons. That distinction matters, so here is what integrating actually means, in the
+            three shapes it can take.
+          </p>
+
+          <h4>1. Issue through Quorum</h4>
+          <p>
+            The path the live demo takes. You deploy <code>QuorumAsset</code> as the security
+            itself, and the check lives in the ERC-20 <code>_update()</code> hook — the function
+            every mint, transfer and burn in OpenZeppelin v5 routes through. There is no code path
+            that moves the token without passing the cap check, which is the property that makes
+            this enforcement rather than a policy document.
+          </p>
+          <div class="codeblock">
+<span class="c">// deploy the register, then the asset that enforces against it</span>
+registry = <span class="k">new</span> PersonRegistry(APASS_ADDRESS);
+ledger   = <span class="k">new</span> SeatLedger(<span class="k">50</span>, <span class="k">365</span>);  <span class="c">// SFA s.272A: 50 persons / 12 months</span>
+asset    = <span class="k">new</span> QuorumAsset(<span class="k">"Note"</span>, <span class="k">"NOTE"</span>, registry, ledger, <span class="k">3000</span>);
+ledger.setOperator(<span class="k">address</span>(asset), <span class="k">true</span>);
+          </div>
+
+          <h4>2. Keep your token, add the register</h4>
+          <p>
+            <code>SeatLedger</code> is deliberately a separate contract that knows nothing about any
+            particular asset, so an existing token can call it from its own transfer hook. This is
+            the intended path for an issuer who already has a token they cannot redeploy. It follows
+            from the design rather than being demonstrated by it — we have not shipped a worked
+            example, so treat it as sound in principle and unproven in practice.
+          </p>
+
+          <h4>3. Ask without integrating at all</h4>
+          <p>
+            <code>preflight()</code> is a <code>view</code> function, so anyone can call it for free
+            over <code>eth_call</code> — your backend, a transfer agent's dashboard, another
+            protocol, or a judge with a terminal. It runs the identical evaluation the transfer hook
+            runs, against live state, and submits nothing. This is the closest thing Quorum has to
+            an API, and it needs no permission.
+          </p>
+          <div class="codeblock">
+<span class="c">// (allowed, reason, seatsAfter) — the same answer the hook would give</span>
+(<span class="k">bool</span> allowed, <span class="k">bytes32</span> reason, <span class="k">uint32</span> seatsAfter)
+    = asset.preflight(from, to, value);
+          </div>
+
+          <h4>The part that is genuinely manual</h4>
+          <p>
+            Person resolution is an operator action today, not a daemon. When someone registers an
+            A-Pass, a script reads their <code>customerId</code> from Cleanverse and writes
+            <code>keccak256(customerId)</code> into <code>PersonRegistry</code>. In production that
+            is a service watching for new registrations; here it is
+            <code>scripts/bind-persons.js</code>, run by hand. The contract enforces continuously
+            once a person is bound — but nothing binds them automatically.
+          </p>
+        </div>
+      </section>
+
+      <section class="doc-section" id="verify">
+        <h2>Verify it yourself</h2>
+        <div class="prose">
+          <p>
+            Every figure on the dashboard is a contract read you can repeat. Nothing below depends
+            on this site being honest — these commands query Monad testnet directly, so if we were
+            lying to you, they would say so.
+          </p>
+
+          <h4>The offering is full, and five persons hold ten wallets</h4>
+          <div class="codeblock">
+<span class="c"># seats consumed, against a cap of 5</span>
+cast call 0x5f80999D2e449479E3765f81666A245135de0aca <span class="k">"activeSeats()(uint32)"</span> \
+  --rpc-url https://testnet-rpc.monad.xyz
+
+<span class="c"># three different wallets, all resolving to person 1 — this is the whole thesis</span>
+<span class="k">for</span> w <span class="k">in</span> 0x66493CA72F0731d1915501732799534d8323AB51 \
+         0xAd51C2F3698EA4C6A6b99C7B2aBC994c796e81D2 \
+         0x3b04f106BB9De2a0a4A8660e74AbB01D7cA6C4d0; <span class="k">do</span>
+  cast call 0xf0D3a94fEb9decdF738Db37e11645C40f69Dad50 <span class="k">"personOf(address)(uint256)"</span> \
+    $w --rpc-url https://testnet-rpc.monad.xyz
+<span class="k">done</span>
+          </div>
+
+          <h4>A fully verified person is refused anyway</h4>
+          <p>
+            Person 6 holds a valid Singapore A-Pass at the same tier as everyone seated. Ask the
+            contract whether they can be admitted:
+          </p>
+          <div class="codeblock">
+cast call 0x26B57c58C20C171233e15c73fA1bD814b269dD88 \
+  <span class="k">"preflight(address,address,uint256)(bool,bytes32,uint32)"</span> \
+  0x0000000000000000000000000000000000000000 \
+  0x9023bfF79B55Ae91149AD86D8Fd7cF3111d9e5d8 10000000000000000000 \
+  --rpc-url https://testnet-rpc.monad.xyz
+
+<span class="c"># false, EXEMPTION_CAPACITY_EXHAUSTED, 5 — decode the reason with:</span>
+cast --to-ascii &lt;the bytes32 above&gt;
+          </div>
+
+          <h4>Concentration is measured per person, not per wallet</h4>
+          <p>
+            Person 1 holds 26% of supply across three wallets, against a 30% ceiling — while no
+            single one of those wallets holds more than 12%. Ask for 40 more into their second
+            wallet, which would leave that wallet at 20% and the person at 34%:
+          </p>
+          <div class="codeblock">
+cast call 0x26B57c58C20C171233e15c73fA1bD814b269dD88 \
+  <span class="k">"preflight(address,address,uint256)(bool,bytes32,uint32)"</span> \
+  0x1f1d773577860dF5B5ffB30521cDE0ea7C2273e4 \
+  0xAd51C2F3698EA4C6A6b99C7B2aBC994c796e81D2 40000000000000000000 \
+  --rpc-url https://testnet-rpc.monad.xyz
+<span class="c"># false, CONCENTRATION_EXCEEDED</span>
+
+<span class="c"># the ceiling and the person's total, to check the arithmetic yourself</span>
+cast call 0x26B57c58C20C171233e15c73fA1bD814b269dD88 <span class="k">"concentrationCeilingBps()(uint16)"</span> --rpc-url https://testnet-rpc.monad.xyz
+cast call 0x26B57c58C20C171233e15c73fA1bD814b269dD88 <span class="k">"personBalance(uint256)(uint256)"</span> 1 --rpc-url https://testnet-rpc.monad.xyz
+cast call 0x26B57c58C20C171233e15c73fA1bD814b269dD88 <span class="k">"totalSupply()(uint256)"</span> --rpc-url https://testnet-rpc.monad.xyz
+          </div>
+
+          <h4>Cleanverse refuses person 6 independently of us</h4>
+          <p>
+            This is the fourth layer, and the one worth checking most carefully, because it does not
+            run our code. Ask Cleanverse's own API whether person 6 may hold this asset. It answers
+            no, with an on-chain <code>SubGroupMismatch</code> revert, because Quorum never granted
+            them the <code>QS</code> tag. Swap in any seated wallet and the same call succeeds.
+          </p>
+          <div class="codeblock">
+curl -s -X POST https://uatapi.cleanverse.com/api/cooperate/verify_apass \
+  -H <span class="k">"Content-Type: application/json"</span> -H <span class="k">"api-id: &lt;your api-id&gt;"</span> \
+  -d <span class="k">'{"chain":"monad",
+       "atoken":"0x26B57c58C20C171233e15c73fA1bD814b269dD88",
+       "address":"0x9023bfF79B55Ae91149AD86D8Fd7cF3111d9e5d8"}'</span>
+          </div>
+          <div class="note">
+            The refusal above is produced by Cleanverse's rule engine, not by Quorum's contract.
+            Quorum computed the seat decision, wrote it into the credential, and stepped out of the
+            way. Both refusals stand on their own.
+          </div>
+
+          <h4>The tests</h4>
+          <div class="codeblock">
+git clone https://github.com/IamHarrie-Labs/quorum &amp;&amp; <span class="k">cd</span> quorum/contracts
+forge test
+<span class="c"># 17 passing, including fuzz invariants asserting activeSeats never exceeds</span>
+<span class="c"># the cap or the number of distinct persons, over 8192 randomised calls each</span>
+          </div>
+        </div>
+      </section>
+
       <section class="doc-section" id="limits">
         <h2>What this doesn't claim</h2>
         <div class="prose">
@@ -530,15 +683,10 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
       <span class="name">QUORUM</span>
     </a>
     <nav>
-      <a href="#" aria-label="GitHub repository">
+      <a href="https://github.com/IamHarrie-Labs/quorum" target="_blank" rel="noopener" aria-label="GitHub repository">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.7-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
         GitHub
-      </a>
-      <a href="#" aria-label="Quorum on X">
-        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9.53 6.78 15.29 0h-1.36l-5 5.79L4.95 0H.15l6.04 8.79L.15 16h1.37l5.28-6.13L11.05 16h4.8L9.53 6.78Zm-1.87 2.17-.61-.88L2.2 1.04h2.1l3.94 5.64.61.87 5.12 7.33h-2.1L7.66 8.95Z"/></svg>
-        X
-      </a>
-      <a href="docs.html">Docs</a>
+      </a>      <a href="docs.html">Docs</a>
     </nav>
   </div>
 </footer>
