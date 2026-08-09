@@ -3,35 +3,35 @@
     "chainId": 10143,
     "rpcUrl": "https://testnet-rpc.monad.xyz",
     "explorer": "https://testnet.monadvision.com",
-    "deployedAt": "2026-08-09T04:54:18Z",
     "deployer": "0xb84bAB328BAab2D9C6d3aac35C68381722911A06",
     "contracts": {
       "PersonRegistry": {
-        "address": "0x19d6Dbb71AE746AE21f5e5d537Cdac8040BE6f5A",
-        "txHash": "0xc91ec9fc7ae99d524c697aaa5303be84cb4ade5a84b11e4b0d791a57266f8020",
+        "address": "0xf0D3a94fEb9decdF738Db37e11645C40f69Dad50",
+        "txHash": "0x4e1e740cd47c42c60aa46d6be1bf1798217ac3b8032486f318a822fe51c210aa",
         "constructorArgs": { "apass": "0xbA82D189540CaC9DC6FF46B6837CaC1BFdEC58B9" }
       },
       "SeatLedger": {
-        "address": "0xD92C8a46eCe81D209367Ee52630aD52F61FC12C0",
-        "txHash": "0x284bebbb442a04e653419795814a574878427ff14140915d0865580cfd71fca6",
+        "address": "0x5f80999D2e449479E3765f81666A245135de0aca",
+        "txHash": "0xd60b55b4ca32e619d6e0ca161befed9edccea086abe3aeb3df504bf25f318ccf",
         "constructorArgs": { "maxPersons": 5, "windowDays": 0 }
       },
       "QuorumAsset": {
-        "address": "0x04A76B2259Cb04caB0cA8a10CDae77406c78d0Ed",
-        "txHash": "0x512ec952df46d7d4bb48e01aad93303b08785dccff9c2b733ef9cc3fed3769cc",
+        "address": "0x26B57c58C20C171233e15c73fA1bD814b269dD88",
+        "txHash": "0x4e25f11b6534c08dffc4048bacb430a4cd66c2c73565293cd3b0077e619b7673",
         "constructorArgs": {
           "name": "Quorum Note",
           "symbol": "QNOTE",
-          "registry": "0x19d6Dbb71AE746AE21f5e5d537Cdac8040BE6f5A",
-          "seatLedger": "0xD92C8a46eCe81D209367Ee52630aD52F61FC12C0",
+          "registry": "0xf0D3a94fEb9decdF738Db37e11645C40f69Dad50",
+          "seatLedger": "0x5f80999D2e449479E3765f81666A245135de0aca",
           "concentrationCeilingBps": 10000
-        }
+        },
+        "note": "Redeployed after adding owner() alias for issuer - required for Cleanverse's owner-signature registration checks."
       }
     },
     "setup": [
       {
         "call": "SeatLedger.setOperator(QuorumAsset, true)",
-        "txHash": "0x68eca60000ff3c3061d083d8c30913b0ee44548fb0727e8da155fbed3eec0496"
+        "txHash": "0x4b5fad6b4c7a0ae068f04ce3cf5359f89792a00a3fff59256d01f40bfbec1c9c"
       }
     ]
   }

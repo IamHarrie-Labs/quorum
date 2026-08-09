@@ -63,6 +63,15 @@ contract QuorumAsset is ERC20 {
         _mint(to, amount);
     }
 
+    /// @notice Ownable-compatible alias for `issuer`.
+    /// @dev Cleanverse's register_atoken and validator/register both verify the owner signature
+    ///      against an on-chain owner() getter. Without this, a contract with a perfectly good
+    ///      access-control scheme reads as ownerless to their side and registration fails silently
+    ///      wrong rather than loudly wrong.
+    function owner() external view returns (address) {
+        return issuer;
+    }
+
     /// @notice Exit the register. Burns the holding and frees the seat once the person is empty.
     /// @dev Without this there is no way out. A transfer-restricted security whose only exit is a
     ///      transfer to another eligible holder can trap someone when the register is full, and
