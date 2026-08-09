@@ -27,8 +27,8 @@
 @media(max-width:960px){.launch-grid{grid-template-columns:1fr}}
 
 .panel{border:1px solid var(--line);border-radius:var(--r-surface);background:var(--bg-tint)}
-.panel-pad{padding:26px}
-.panel-head{padding:16px 22px;border-bottom:1px solid var(--line-soft)}
+.panel-pad{padding:24px}
+.panel-head{padding:16px 24px;border-bottom:1px solid var(--line-soft)}
 .panel-label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg-faint)}
 
 .step{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--line-soft)}
@@ -77,9 +77,17 @@
 .manage.show{display:block}
 .manage h4{font-size:13.5px;margin-bottom:12px}
 
+.wallet-menu{position:relative}
 .wallet-pill{font-family:var(--mono);font-size:12px;padding:8px 14px;border:1px solid var(--line);
-  border-radius:999px;color:var(--fg-dim)}
-.wallet-pill.connected{border-color:var(--approved-edge);color:var(--approved)}
+  border-radius:999px;color:var(--fg-dim);background:none;cursor:default}
+.wallet-pill.connected{border-color:var(--approved-edge);color:var(--approved);cursor:pointer}
+.wallet-dropdown{position:absolute;right:0;top:calc(100% + 8px);background:var(--bg-tint);
+  border:1px solid var(--line);border-radius:var(--r-control);padding:6px;min-width:140px;
+  display:none;z-index:20;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.wallet-dropdown.show{display:block}
+.wallet-dropdown button{width:100%;text-align:left;padding:8px 10px;border-radius:6px;border:none;
+  background:none;color:var(--fg-dim);font-family:var(--sans);font-size:13px;cursor:pointer}
+.wallet-dropdown button:hover{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--fg)}
 
 .tag{padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-family:var(--mono);font-size:10.5px;color:var(--fg-faint)}
 
@@ -127,8 +135,12 @@
           <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"/>
         </svg>
       </button>
-      <span id="walletPill" class="wallet-pill">Not connected</span>
-      <button class="btn btn-ghost" id="disconnectBtn" type="button" style="display:none;padding:7px 13px;font-size:12.5px">Disconnect</button>
+      <div class="wallet-menu" id="walletMenu">
+        <button type="button" id="walletPill" class="wallet-pill">Not connected</button>
+        <div class="wallet-dropdown" id="walletDropdown">
+          <button type="button" id="disconnectBtn">Disconnect</button>
+        </div>
+      </div>
     </nav>
   </div>
 </header>
@@ -394,8 +406,7 @@ async function connect(){
     var pill = document.getElementById("walletPill");
     pill.textContent = short(addr);
     pill.classList.add("connected");
-    document.getElementById("disconnectBtn").style.display = "inline-block";
-    document.getElementById("networkHint").textContent = "Connected. You're set to deploy.";
+    document.getElementById("networkHint").textContent = "";
     document.getElementById("deployBtn").textContent = "Deploy my register";
     setStep(2);
   }catch(e){
@@ -403,13 +414,24 @@ async function connect(){
   }
 }
 
+function closeWalletDropdown(){
+  document.getElementById("walletDropdown").classList.remove("show");
+}
+document.getElementById("walletPill").addEventListener("click", function(){
+  if (!this.classList.contains("connected")) return;
+  document.getElementById("walletDropdown").classList.toggle("show");
+});
+document.addEventListener("click", function(e){
+  if (!document.getElementById("walletMenu").contains(e.target)) closeWalletDropdown();
+});
+
 function disconnect(){
   signer = null;
   provider = null;
   var pill = document.getElementById("walletPill");
   pill.textContent = "Not connected";
   pill.classList.remove("connected");
-  document.getElementById("disconnectBtn").style.display = "none";
+  closeWalletDropdown();
   document.getElementById("networkHint").textContent = "You'll need Monad testnet. We'll help you switch if you're not on it.";
   document.getElementById("deployBtn").textContent = "Connect wallet";
   setStep(1);

@@ -20,7 +20,10 @@
 </script>
 <style>
 .dash-head{padding:44px 0 8px}
-.dash-top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.dash-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.launch-cta{border:1px solid var(--accent);border-radius:var(--r-control);color:var(--on-accent);
+  background:var(--accent);font-weight:600;font-size:12.5px;padding:9px 16px}
+.launch-cta:hover{background:var(--accent-bright);border-color:var(--accent-bright)}
 .dash-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--fg-faint)}
 .dash-head h1{font-family:var(--display);font-size:clamp(30px,3.6vw,42px);margin-top:8px}
 .tags{display:flex;gap:9px;flex-wrap:wrap;font-family:var(--mono);font-size:11px}
@@ -174,7 +177,6 @@
       <span class="name">QUORUM</span>
     </a>
     <nav>
-      <a href="index.html">← Overview</a>
       <a href="docs.html">Docs</a>
       <button class="toggle" id="theme" type="button" aria-label="Switch colour theme">
         <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
@@ -187,6 +189,7 @@
           <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"/>
         </svg>
       </button>
+      <a href="index.html">Overview</a>
     </nav>
   </div>
 </header>
@@ -201,9 +204,8 @@
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px">
         <div class="tags">
           <span class="tag gold">sg_sfa_272a</span>
-          <span class="tag">demo cap 5</span>
         </div>
-        <a class="btn btn-ghost" href="launch.html" style="font-size:12.5px;padding:8px 15px">Launch your own register</a>
+        <a class="btn launch-cta" href="launch.html">Launch your own register</a>
       </div>
     </div>
   </div>
