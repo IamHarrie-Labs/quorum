@@ -6,6 +6,7 @@ node_modules/
 
 # Foundry
 contracts/out/
+contracts/out-factory/
 contracts/cache/
 contracts/broadcast/*/*/run-*.json
 

@@ -57,7 +57,7 @@
     "factory": {
       "note": "Self-serve deployment: any wallet calls deploy() and owns the result. The Quorum deployer never signs, never holds a key on it, and is provably locked out - confirmed by trying and getting NotRegisterOwner back.",
       "address": "0x385c692d7AAC898FEdDb7282B1860318CD47bD30",
-      "deployTxHash": "not captured in script output - deployed via forge script --broadcast, code verified present",
+      "deployTxHash": "0x452eab500a51947c6e16dd55adfb378df6bc3034989694b3cdfa3ca00df4d124",
       "compiledWith": "FOUNDRY_PROFILE=factory (optimizer on, size-optimised - the factory embeds all three children's creation code and exceeds EIP-170 unoptimised at the default profile's settings)",
       "demoRegister": {
         "note": "Deployed by a fresh, unrelated wallet (0x0cd1...F047) with Singapore's real parameters, not the demo's narrowed ones - proof this isn't just self-serve for the specific 5-seat pack shown elsewhere on this site.",
