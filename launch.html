@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quorum, launch your register</title>
-<meta name="description" content="Deploy a Quorum-protected security in one wallet transaction. No code, no help from us — you own everything it deploys.">
+<meta name="description" content="Deploy your own Quorum register in one wallet transaction. You own it, we never touch it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -128,23 +128,20 @@
 
 <main>
   <div class="wrap launch-head">
-    <div class="tag" style="margin-bottom:14px;display:inline-block">Self-serve · no code</div>
     <h1>Launch your own register.</h1>
     <p>
-      One wallet transaction deploys a complete, independent Quorum register — a person registry,
-      a seat ledger, and the security itself. You own all three the moment they exist. We never see
-      a key, hold a permission, or need to be in the room. This calls the same
-      <code>QuorumFactory</code> contract live on Monad testnet, from your wallet.
+      Connect your wallet, set your numbers, and sign once. That deploys your own copy of Quorum,
+      and you own it from that moment on. We never hold a key on it, and once it's live, we can't
+      touch it either.
     </p>
   </div>
 
   <div class="wrap launch-grid">
     <div class="panel panel-pad">
 
-      <div class="field-row">
-        <label>Wallet</label>
+      <div class="field-row" id="connectRow">
         <button class="btn btn-primary" id="connectBtn" type="button" style="width:100%">Connect wallet</button>
-        <div class="hint" id="networkHint">Needs Monad testnet (chainId 10143). We'll offer to add/switch it for you.</div>
+        <div class="hint" id="networkHint">You'll need Monad testnet. We'll help you switch if you're not on it.</div>
       </div>
 
       <div class="field-row">
@@ -204,7 +201,7 @@
       <div class="error" id="errorBox"></div>
 
       <div class="result" id="resultBox">
-        <div class="k" style="margin-bottom:10px">Deployed — you own this</div>
+        <div class="k" style="margin-bottom:10px">Deployed. This is yours.</div>
         <div class="addr-row"><span>Asset</span><a id="rAsset" href="#" target="_blank" rel="noopener"></a></div>
         <div class="addr-row"><span>Person registry</span><a id="rRegistry" href="#" target="_blank" rel="noopener"></a></div>
         <div class="addr-row"><span>Seat ledger</span><a id="rLedger" href="#" target="_blank" rel="noopener"></a></div>
@@ -215,7 +212,7 @@
           <div class="field-row">
             <label>Recipient wallet</label>
             <input type="text" id="issueTo" placeholder="0x…">
-            <div class="hint">They must have a Cleanverse A-Pass registered to a personId in this register before this succeeds — <code>PersonRegistry.bind()</code> from your registrar wallet does that. This demo skips straight to issuance to keep the loop short; a real issuer runs the resolver script from the docs first.</div>
+            <div class="hint">They'll need a Cleanverse identity check done first, or this will fail. We're skipping that step here to keep the demo short; a real issuer would run it before issuing anything.</div>
           </div>
           <div class="field-row">
             <label>Amount</label>
@@ -228,23 +225,19 @@
     </div>
 
     <div class="panel">
-      <div class="panel-head"><div class="panel-label">What happens</div></div>
+      <div class="panel-head"><h3 style="font-size:15px;color:var(--fg)">How it works</h3></div>
       <div class="panel-pad" style="padding-top:18px">
         <div class="step" id="step1">
-          <div class="step-num">1</div>
-          <div class="step-body"><h4>Connect a wallet</h4><p>Any injected wallet on Monad testnet. Gas only — this contract has no fee.</p></div>
+          <div class="step-body"><h4>Connect a wallet</h4><p>Any wallet works, as long as it's on Monad testnet. You'll only pay gas.</p></div>
         </div>
         <div class="step" id="step2">
-          <div class="step-num">2</div>
-          <div class="step-body"><h4>Set your numbers</h4><p>Pick a preset or enter your own headcount cap, window, and concentration ceiling.</p></div>
+          <div class="step-body"><h4>Set your numbers</h4><p>Pick a preset, or type in your own cap, window, and concentration limit.</p></div>
         </div>
         <div class="step" id="step3">
-          <div class="step-num">3</div>
-          <div class="step-body"><h4>Sign one transaction</h4><p><code>QuorumFactory.deploy()</code> creates all three contracts and makes your wallet their owner, atomically.</p></div>
+          <div class="step-body"><h4>Sign once</h4><p>That one signature sets everything up and makes your wallet the owner.</p></div>
         </div>
         <div class="step" id="step4">
-          <div class="step-num">4</div>
-          <div class="step-body"><h4>You're the only one who can touch it</h4><p>We proved this on-chain: our own deployer wallet tried to act on a factory-deployed register it didn't own and was refused with <code>NotRegisterOwner</code>. <a href="docs.html#integrate">Read how</a>.</p></div>
+          <div class="step-body"><h4>Nobody else can touch it</h4><p>Not even us. We tried, on-chain, and got turned away. <a href="docs.html#integrate">Here's how</a>.</p></div>
         </div>
       </div>
     </div>
@@ -253,13 +246,6 @@
 
 <footer>
   <div class="wrap foot">
-    <a class="foot-brand" href="index.html">
-      <span class="mark-slot">
-        <img src="assets/quorum-mark.png" alt="" onerror="this.remove()">
-        <svg viewBox="0 0 204 100" aria-hidden="true"><rect width="204" height="100" fill="var(--mark)" mask="url(#q-notch)"/></svg>
-      </span>
-      <span class="name">QUORUM</span>
-    </a>
     <nav>
       <a href="https://github.com/IamHarrie-Labs/quorum" target="_blank" rel="noopener" aria-label="GitHub repository">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.7-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
@@ -343,9 +329,10 @@ async function connect(){
     var pill = document.getElementById("walletPill");
     pill.textContent = short(addr);
     pill.classList.add("connected");
+    document.getElementById("connectBtn").style.display = "none";
+    document.getElementById("networkHint").textContent = "Connected. You're set to deploy.";
     document.getElementById("deployBtn").disabled = false;
     document.getElementById("deployBtn").textContent = "Deploy my register";
-    document.getElementById("networkHint").textContent = "Connected on Monad testnet.";
     setStep(2);
   }catch(e){
     showError(document.getElementById("errorBox"), e.shortMessage || e.message);

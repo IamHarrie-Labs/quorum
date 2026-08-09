@@ -49,7 +49,7 @@
 .seat-row{display:flex;gap:12px}
 .seat-item{flex:1;text-align:center}
 .seat-item .dot{aspect-ratio:1;border-radius:50%;border:2px solid var(--line);transition:background .3s var(--ease),border-color .3s var(--ease)}
-.seat-item.filled .dot{background:linear-gradient(135deg,var(--accent-bright),var(--accent-dim));border-color:transparent}
+.seat-item.filled .dot{background:var(--approved);border-color:transparent}
 .seat-item .tag-num{font-family:var(--mono);font-size:10.5px;color:var(--fg-faint);margin-top:8px}
 
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -173,8 +173,8 @@
       <span class="name">QUORUM</span>
     </a>
     <nav>
+      <a href="index.html">← Overview</a>
       <a href="docs.html">Docs</a>
-      <a href="launch.html">Launch</a>
       <button class="toggle" id="theme" type="button" aria-label="Switch colour theme">
         <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
              stroke-linecap="round" aria-hidden="true">
@@ -186,7 +186,7 @@
           <path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7Z"/>
         </svg>
       </button>
-      <a class="btn btn-primary" href="index.html">Back to overview</a>
+      <a class="btn btn-primary" href="launch.html">Launch your own</a>
     </nav>
   </div>
 </header>
@@ -201,7 +201,6 @@
       <div class="tags">
         <span class="tag gold">sg_sfa_272a</span>
         <span class="tag">demo cap 5</span>
-        <span class="tag live"><span class="pulse"></span>Monad testnet</span>
       </div>
     </div>
   </div>
@@ -256,10 +255,7 @@
 
         <div class="panel scenario-panel">
           <div class="panel-label">Check your own wallet</div>
-          <p>
-            Read-only. Nothing is signed, no gas is spent, and you do not need Monad testnet added
-            to your wallet — Quorum reads your address against the live register on our RPC.
-          </p>
+          <p>Connect and we'll look you up. Just a lookup, nothing to sign, no gas.</p>
           <button class="btn btn-primary" id="connectBtn" type="button" style="width:100%">Connect wallet</button>
           <div id="ownWalletResult"></div>
         </div>
@@ -280,13 +276,6 @@
 
 <footer>
   <div class="wrap foot">
-    <a class="foot-brand" href="index.html">
-      <span class="mark-slot">
-        <img src="assets/quorum-mark.png" alt="" onerror="this.remove()">
-        <svg viewBox="0 0 204 100" aria-hidden="true"><rect width="204" height="100" fill="var(--mark)" mask="url(#q-notch)"/></svg>
-      </span>
-      <span class="name">QUORUM</span>
-    </a>
     <nav>
       <a href="https://github.com/IamHarrie-Labs/quorum" target="_blank" rel="noopener" aria-label="GitHub repository">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.7-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
@@ -539,7 +528,7 @@ async function runPreflight(kind){
     var allowed = res[0], reason = reasonToText(res[1]), seatsAfter = res[2];
     showDecision(allowed ? "ok" : "no",
       allowed ? "Person 6 would be admitted." : "The room is full. Admitting person 6 would void the exemption for everyone already holding.",
-      "Live call against " + short(to) + " — fully verified (SG, tier 50), refused solely on capacity. Every other system in this hackathon checks the wallet and stops there.",
+      "Live call against " + short(to) + ", fully verified, SG, tier 50, refused solely on capacity. Every other system in this hackathon checks the wallet and stops there.",
       reason || "—", seatsAfter + "/" + (await state.ledger.maxPersons()) + " persons",
       blockNum);
   }
@@ -562,7 +551,7 @@ async function runPreflight(kind){
     showDecision(allowedC ? "ok" : "no",
       "One person, several modest wallets, over the ceiling.",
       "Person 2 sends 40 QNOTE to person 1's <em>second</em> wallet. That receiving wallet would " +
-      "hold " + pctWallet.toFixed(1) + "% of supply — unremarkable, and under the " + ceil.toFixed(0) +
+      "hold " + pctWallet.toFixed(1) + "% of supply, unremarkable, well under the " + ceil.toFixed(0) +
       "% ceiling by any per-wallet measure. Summed across every address resolving to person " +
       p1c.personId + ", the same transfer puts one human at " + pctPerson.toFixed(1) + "%. " +
       "Per-wallet accounting sees two modest holders. Quorum sees one.",
@@ -576,7 +565,7 @@ async function runPreflight(kind){
     var allowed2 = res2[0], reason2 = reasonToText(res2[1]), seatsAfter2 = res2[2];
     showDecision(allowed2 ? "ok" : "no",
       "Second wallet of an already-seated person.",
-      "Live call against " + short(to2) + " — personId " + p1.personId + " already holds a seat through wallet 1, so acquiring more through wallet 2 consumes no additional seat.",
+      "Live call against " + short(to2) + ". personId " + p1.personId + " already holds a seat through wallet 1, so acquiring more through wallet 2 doesn't cost a second one.",
       reason2 || "no seat consumed", seatsAfter2 + "/" + (await state.ledger.maxPersons()) + " persons",
       blockNum);
   }
@@ -612,17 +601,17 @@ function renderOwnWallet(html){
 
 async function checkOwnWallet(){
   if(!window.ethereum){
-    renderOwnWallet('<div class="own-note">No browser wallet detected. You can still read the ' +
-      'register above — every figure on this page is a live call and needs no wallet at all.</div>');
+    renderOwnWallet('<div class="own-note">No wallet found in this browser. Everything above still ' +
+      'works without one, since it is all read live anyway.</div>');
     return;
   }
 
-  renderOwnWallet('<div class="own-note">Awaiting wallet…</div>');
+  renderOwnWallet('<div class="own-note">Waiting on your wallet…</div>');
   var accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
   var addr = accounts && accounts[0];
-  if(!addr){ renderOwnWallet('<div class="own-note">No account returned.</div>'); return; }
+  if(!addr){ renderOwnWallet('<div class="own-note">No account came through.</div>'); return; }
 
-  renderOwnWallet('<div class="own-note">Reading ' + short(addr) + ' against the live register…</div>');
+  renderOwnWallet('<div class="own-note">Looking up ' + short(addr) + '…</div>');
 
   var personId = await state.registry.personOf(addr);
   var blockNum = await provider.getBlockNumber();
@@ -649,21 +638,21 @@ async function checkOwnWallet(){
 
   var explain;
   if(!known){
-    explain = "Your wallet has no A-Pass in this offering, so Quorum cannot resolve it to a person " +
-      "and refuses before any balance moves. That refusal is the whole point: identity is a " +
-      "precondition, not an afterthought. A real issuer would onboard you through Cleanverse first.";
+    explain = "We don't have an A-Pass on file for this wallet, so we can't tell who you are yet. " +
+      "That's why the transfer gets refused before anything moves. A real issuer would send you " +
+      "to Cleanverse to get verified first.";
   } else if(allowed){
-    explain = "Your wallet resolves to a person already known to this register, and admitting this " +
-      "transfer would keep the holder base inside every rule the pack enforces.";
+    explain = "This wallet is already registered to a known holder, and letting the transfer " +
+      "through wouldn't break any of the pack's rules.";
   } else {
-    explain = "Your wallet resolves to a known person, but the resulting state of the cap table " +
-      "would breach the rule named above, so the transfer is refused before it settles.";
+    explain = "We know who you are, but the transfer would push the cap table past a rule it has " +
+      "to obey, so it gets refused before it settles.";
   }
 
   renderOwnWallet(
     '<div class="own-card">' + rows +
     '<p class="own-explain">' + explain + '</p>' +
-    '<p class="own-foot">Live eth_call at block ' + blockNum + '. Nothing signed, no gas spent.</p>' +
+    '<p class="own-foot">Checked live at block ' + blockNum + '. Nothing signed, no gas spent.</p>' +
     '</div>'
   );
 }
