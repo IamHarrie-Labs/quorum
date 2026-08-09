@@ -50,6 +50,32 @@
         "call": "SeatLedger.setOperator(QuorumAsset, true)",
         "txHash": "0x4b5fad6b4c7a0ae068f04ce3cf5359f89792a00a3fff59256d01f40bfbec1c9c"
       }
-    ]
+    ],
+    "demoScenes": {
+      "seatsFilled": {
+        "note": "P1-P5 issued 100 QNOTE each, real transactions",
+        "txHashes": [
+          "0xc9a0d706a9706080bede5fb22075c9069da048cd7a073f51e0f5382069367e52",
+          "0x869f8ae89bc15e2e3c705fb04340f6201c6a808e6adf4990aaab0756d60ac8b0",
+          "0x31bb1d3877291c0be1e0584479d07d968875ca224f8d92251afe51f5b6f72bf4",
+          "0x22c039a7b5c6174ae3cb97b5bc2c67b9dd526e3fab4bad93d4f62e7bcd18fc55",
+          "0x02bd4bbb96e2d06f832085aa91b680036e922de3375b9801a73e579d5cc2a5e4"
+        ],
+        "activeSeatsAfter": 5
+      },
+      "p6Refused": {
+        "note": "P6 fully verified (SG, tier 50, personId 6) but refused on issue() - room full",
+        "preflightReason": "EXEMPTION_CAPACITY_EXHAUSTED",
+        "revertSelector": "0x705db2a0"
+      },
+      "walletSplit": {
+        "note": "P1 wallet1 -> wallet2 (30 QNOTE), wallet1 -> wallet3 (20 QNOTE). activeSeats unchanged at 5 throughout.",
+        "txHashes": [
+          "0x1722f52d9ae679b35512bee63ae9f3ad7156b580bd1854dc8adfd4f6766c319b",
+          "0xf3617181ba1829e8ad66ed2c6ba61b1a1fade16c5aaf46128c342bbb9c4e7e14"
+        ],
+        "finalBalances": { "wallet1": "50", "wallet2": "30", "wallet3": "20" }
+      }
+    }
   }
 }
