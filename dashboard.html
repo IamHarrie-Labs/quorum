@@ -604,15 +604,30 @@ function renderOwnWallet(html){
   document.getElementById("ownWalletResult").innerHTML = html;
 }
 
+// MetaMask, OKX, and other extensions can all inject at once. Some (OKX included) only
+// expose window.okxwallet unless the user set them as their browser's default wallet.
+function getInjectedWallet(){
+  if (window.ethereum){
+    if (Array.isArray(window.ethereum.providers) && window.ethereum.providers.length){
+      return window.ethereum.providers.find(function(p){ return p.isOkxWallet || p.isOKExWallet; })
+        || window.ethereum.providers[0];
+    }
+    return window.ethereum;
+  }
+  if (window.okxwallet) return window.okxwallet;
+  return null;
+}
+
 async function checkOwnWallet(){
-  if(!window.ethereum){
+  var eth = getInjectedWallet();
+  if(!eth){
     renderOwnWallet('<div class="own-note">No wallet found in this browser. Everything above still ' +
       'works without one, since it is all read live anyway.</div>');
     return;
   }
 
   renderOwnWallet('<div class="own-note">Waiting on your wallet…</div>');
-  var accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+  var accounts = await eth.request({ method: "eth_requestAccounts" });
   var addr = accounts && accounts[0];
   if(!addr){ renderOwnWallet('<div class="own-note">No account came through.</div>'); return; }
 
