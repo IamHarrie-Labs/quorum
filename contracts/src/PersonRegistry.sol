@@ -15,9 +15,17 @@ interface IAPass {
 /// @notice Collapses many wallets into one legal person.
 /// @dev This is the whole reason Quorum can exist. Every securities exemption is a headcount rule,
 ///      and a chain counts wallets, not people — one person opens fifty wallets in an afternoon.
-///      Cleanverse's A-Pass is bank-verified and wallet-bound, so `currentKycHash` from
-///      /query_apass is the same value for every wallet belonging to one human. We bind that hash
-///      to a dense personId and count personIds instead of addresses.
+///      Cleanverse's A-Pass is bank-verified and wallet-bound, so we need one stable identifier
+///      per human across their wallets.
+///
+///      Confirmed empirically 2026-08-09: `currentKycHash` from /query_apass does NOT serve this
+///      purpose — it differs per wallet even for identical identity data, because it hashes the
+///      individual A-Pass registration record, not the person. The actual person key is
+///      `customerId`: the institution's own persistent ID, which /generate_apass groups by when
+///      the same customerId is reused across wallet addresses (verified via query_apass_list —
+///      matching wallets share one cvRecordId). Off-chain, Quorum resolves wallet → personHash as
+///      keccak256(customerId) and binds it here. The contract itself is source-agnostic; it only
+///      ever sees the resulting bytes32.
 contract PersonRegistry {
     error NotRegistrar();
     error AlreadyBound(address wallet);
@@ -67,8 +75,9 @@ contract PersonRegistry {
 
     /// @notice Bind a wallet to the person identified by their Cleanverse KYC hash.
     /// @dev Two wallets with the same hash land on the same personId — that is the point. The
-    ///      hash comes from POST /query_apass; the backend is a courier, not an authority, and
-    ///      cannot invent a person because a fabricated hash simply creates an unfunded personId.
+    ///      hash is keccak256(customerId) resolved off-chain via query_apass_list; the backend is
+    ///      a courier, not an authority, and cannot invent a person because a fabricated hash
+    ///      simply creates an unfunded personId.
     function bind(address wallet, bytes32 kycHash) external onlyRegistrar returns (uint256 personId) {
         if (kycHash == bytes32(0)) revert ZeroHash();
         if (personOf[wallet] != 0) revert AlreadyBound(wallet);

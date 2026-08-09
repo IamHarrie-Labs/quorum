@@ -1,0 +1,109 @@
+{
+  "chain": "monad",
+  "note": "Fictional demo cast, sandbox A-Passes only. Wallets are fresh burner keys generated for this hackathon submission - never funded beyond gas, private keys never committed.",
+  "personRegistry": "0xf0D3a94fEb9decdF738Db37e11645C40f69Dad50",
+  "cast": [
+    {
+      "key": "P1",
+      "name": "Adaeze Okonkwo",
+      "country": "SG",
+      "personId": 1,
+      "customerId": "QRMPERSON1MAIN01",
+      "cvRecordId": "1974",
+      "note": "Wallet-split scene: three wallets, one personId.",
+      "wallets": [
+        {
+          "address": "0x66493CA72F0731d1915501732799534d8323AB51",
+          "generateApassTxHash": "0x73385c030c5184bcaef4ea9a062c3e22b58a1007c4e2f6f8bab92f79936af6e3",
+          "bindTxHash": "0xbbaa2b3b89b13a46640b5d674200d7c97b10dbf666e2292bae293d08659cc388"
+        },
+        {
+          "address": "0xAd51C2F3698EA4C6A6b99C7B2aBC994c796e81D2",
+          "generateApassTxHash": "0x425ef270b660eec669b9434446eb542b803b4e3442ea55662885e19b9b698b3e",
+          "bindTxHash": "0xd81bc84dd94b50286b3d8260e186efc2072c4ae49831b1c5ea7d92e1e0e39090"
+        },
+        {
+          "address": "0x3b04f106BB9De2a0a4A8660e74AbB01D7cA6C4d0",
+          "generateApassTxHash": "0xac185f06067928e201c6652b2d615b5f801c20dd68c05bba95de9332609ba227",
+          "bindTxHash": "0xfae90a15ee73f5d46136316a85758ab3caaf1f3c80a4e48293c6516bdbeb42da"
+        }
+      ]
+    },
+    {
+      "key": "P2",
+      "name": "Marcus Tan",
+      "country": "SG",
+      "personId": 2,
+      "customerId": "QRMP2uoi7lw0g000",
+      "cvRecordId": "1977",
+      "wallets": [
+        {
+          "address": "0x1f1d773577860dF5B5ffB30521cDE0ea7C2273e4",
+          "generateApassTxHash": "0xc6f7c79abb26ee71c1958e87af5798f0b34ecf750c282e1f318c99cd3388824c",
+          "bindTxHash": "0xd5d42a9c9d14fa4116a263078aa00037c62d4a385a5df73445a1201cd38080b1"
+        }
+      ]
+    },
+    {
+      "key": "P3",
+      "name": "Rina Kaur",
+      "country": "SG",
+      "personId": 3,
+      "customerId": "QRMP3dc0fm2ym000",
+      "cvRecordId": "1978",
+      "wallets": [
+        {
+          "address": "0x3570D7aAFb5C6240Fd55D0e5Ea8319Ef4a5959C2",
+          "generateApassTxHash": "0x43b44c58ba0695e91a39ebe69c37c241abcf776ac0e354a5466d8937f6c3e5be",
+          "bindTxHash": "0x16cec81a69fbee944e22d3777d8d35f30af8762edb8604329e53090c4b10cbc5"
+        }
+      ]
+    },
+    {
+      "key": "P4",
+      "name": "Jonas Frey",
+      "country": "SG",
+      "personId": 4,
+      "customerId": "QRMP4limf40jr000",
+      "cvRecordId": "1979",
+      "wallets": [
+        {
+          "address": "0x79Ee203bC0574dC952D160e0d8c48ddCCA6Fe227",
+          "generateApassTxHash": "0xd979150f35a5b59e1a494687c31b07ed5922196fc9ecb263060bd808f6a7d813",
+          "bindTxHash": "0xdf374bb49ef8c4c404477670e143e9a737ebe3b11fbaa4d8fc10208e8f985af3"
+        }
+      ]
+    },
+    {
+      "key": "P5",
+      "name": "Wei Lin Cheong",
+      "country": "SG",
+      "personId": 5,
+      "customerId": "QRMP59ekk03qu000",
+      "cvRecordId": "1980",
+      "wallets": [
+        {
+          "address": "0x16524EB3D707B8CAd5b3f6A1945037686fDB486B",
+          "generateApassTxHash": "0x7e7d27ffafd06f86bd43553d3f5ff386f3d21e82698ae7f94d2024d325a2f2af",
+          "bindTxHash": "0x1bc2f99ec6150b947cf732ca68b95b2a22c1326265d0983f1ee5e8f82ad986fa"
+        }
+      ]
+    },
+    {
+      "key": "P6",
+      "name": "Priya Raman",
+      "country": "SG",
+      "personId": 6,
+      "customerId": "QRMP6b95fxhmw000",
+      "cvRecordId": "1981",
+      "note": "Refused-recipient scene: fully verified, seated last, refused once the room is full.",
+      "wallets": [
+        {
+          "address": "0x9023bfF79B55Ae91149AD86D8Fd7cF3111d9e5d8",
+          "generateApassTxHash": "0x18e5e39d5f790ff0ea0061cb2bed0e29b171bb462ff32469cfc448cf2574fc9d",
+          "bindTxHash": "0x645d8bdf7c19d44a8820f4447cdfc66a07c573f5a55ff7368edaea86185e0012"
+        }
+      ]
+    }
+  ]
+}
