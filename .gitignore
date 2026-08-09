@@ -20,3 +20,4 @@ app/out/
 Thumbs.db
 
 .vercel
+.agents/
