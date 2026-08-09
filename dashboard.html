@@ -484,6 +484,16 @@ async function renderLog(){
     rows.push({ kind:"no", action:"Transfer refused - person over 30% across three wallets (receiving wallet only 12%)", rule:"CONCENTRATION_EXCEEDED", tx: scenes.concentration.refusedTxHash });
   }
   rows.push({ kind:"no", action:"Subscription refused - personId 6, room full, fully verified", rule:"EXEMPTION_CAPACITY_EXHAUSTED", tx:null, note: scenes.p6Refused.revertSelector });
+  if(scenes.freezeUnfreeze){
+    var fz = scenes.freezeUnfreeze;
+    rows.push({ kind:"no", action:"A-Pass frozen through Cleanverse - seat retained, acquisition blocked", rule:"update_status - freeze", tx: fz.freezeTxHash });
+    rows.push({ kind:"ok", action:"A-Pass unfrozen through Cleanverse - verify_apass recovers", rule:"update_status - unfreeze", tx: fz.unfreezeTxHash });
+  }
+  if(scenes.layer4WriteBack){
+    var l4 = scenes.layer4WriteBack;
+    rows.push({ kind:"ok", action:"A-Token rule added: allowed_sub_group QS - Cleanverse's own engine now gates on Quorum's seat decision", rule:"layer 4 - write-back", tx: l4.addRuleTxHash });
+    rows.push({ kind:"no", action:"Person 6 refused by Cleanverse's verify_apass, independently of QuorumAsset - " + l4.result.unseatedRevert, rule:"SubGroupMismatch (Cleanverse-side)", tx:null, note: l4.result.unseatedRevert });
+  }
 
   box.innerHTML = '<div class="log-row"><div class="log-action">Resolving ' + rows.length + ' receipts…</div></div>';
   var resolved = await Promise.all(rows.map(async function(r){
