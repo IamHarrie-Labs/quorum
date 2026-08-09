@@ -1,4 +1,6 @@
 {
+  "liveDemo": "https://iamharrie-labs.github.io/quorum/dashboard.html",
+  "repo": "https://github.com/IamHarrie-Labs/quorum",
   "monad-testnet": {
     "chainId": 10143,
     "rpcUrl": "https://testnet-rpc.monad.xyz",
