@@ -155,8 +155,8 @@
         <div class="prose">
           <p>
             Quorum is a security whose offering cannot exceed the headcount its legal exemption
-            allows, because the count is checked on-chain before a transfer settles rather than
-            reconciled by a transfer agent afterward.
+            allows. The count gets checked on-chain before a transfer settles, well before any
+            transfer agent would get around to reconciling it afterward.
           </p>
           <p>
             The idea sits on one observation: a private placement exemption is not a rule about
@@ -169,7 +169,7 @@
           </p>
           <p>
             Cleanverse's identity credential changes that, because it is bound to a verified human
-            rather than to a wallet. Quorum uses that binding to collapse many wallets into one
+            instead of a wallet. Quorum uses that binding to collapse many wallets into one
             person and count persons instead. Everything else in this document is that idea worked
             through to its contracts.
           </p>
@@ -226,12 +226,22 @@
           </p>
           <p>
             Cleanverse's <b>A-Pass</b> is a credential generated against a person's bank-verified
-            identity documents, not against a wallet in isolation. Calling <code>query_apass</code>
-            for any registered wallet returns, among other fields, <code>currentKycHash</code>, a
-            hash of that person's underlying KYC data. Register two different wallets under the
-            same identity documents and both wallets resolve to the <em>same</em> hash. That hash,
-            not the wallet address, is what Quorum treats as the unit it counts.
+            identity documents, so it belongs to a human instead of a wallet in isolation.
+            Every A-Pass carries a <code>customerId</code>, Cleanverse's own persistent identifier
+            for that person. Register two different wallets under the same <code>customerId</code>
+            and both wallets belong to the same person as far as Cleanverse is concerned. That
+            identifier, not the wallet address, is what Quorum treats as the unit it counts.
           </p>
+          <div class="note">
+            <b>A correction, kept here on purpose.</b> The original design used
+            <code>currentKycHash</code> from <code>query_apass</code>, since it looked like the
+            natural candidate. Registering three wallets under identical identity data and
+            comparing the hashes live showed it isn't stable across a person's wallets: it hashes
+            each A-Pass registration record individually, not the human behind them. The real
+            cross-wallet key is <code>customerId</code>, confirmed via <code>query_apass_list</code>.
+            The fix is described in <code>contracts/src/PersonRegistry.sol</code>'s doc comments and
+            <code>scripts/setup-identities.js</code>.
+          </div>
           <h3>What this buys the register</h3>
           <p>
             An investor who already holds a seat can add a second, third, or fourth wallet, each
@@ -255,10 +265,10 @@
             <div>
               <h4>PersonRegistry</h4>
               <p>
-                Maps a Cleanverse <code>currentKycHash</code> to a dense <code>personId</code>, and
-                a wallet address to that same <code>personId</code>. Binding a second wallet under
-                an existing hash extends the same person's wallet set rather than creating a new
-                one. This is the only contract that ever touches identity.
+                Maps a hash of Cleanverse's <code>customerId</code> to a dense <code>personId</code>,
+                and a wallet address to that same <code>personId</code>. Binding a second wallet
+                under an existing hash extends the same person's wallet set instead of creating a
+                new one. This is the only contract that ever touches identity.
               </p>
             </div>
             <div>
@@ -302,7 +312,7 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
         <div class="prose">
           <p>
             A transfer through <code>QuorumAsset</code> passes four checks, all of them live. Three
-            run inside Cleanverse. Only the third is Quorum's own — and the fourth is the
+            run inside Cleanverse. Only the third is Quorum's own, and the fourth is the
             interesting one, because it is Quorum's conclusion being enforced by Cleanverse.
           </p>
           <ul>
@@ -311,7 +321,7 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
               registered against this A-Token.</li>
             <li><b>Validator pool rule.</b> Quorum registers itself as a compliance pool with
               Cleanverse's Validator module, so this register is a participant in their compliance
-              system rather than an outside caller of it. Live: <code>is_register</code> returns
+              system instead of an outside caller of it. Live: <code>is_register</code> returns
               true for this contract.</li>
             <li><b>Seat and concentration invariant.</b> Would the resulting holder set still
               satisfy the exemption's headcount, and would any one person end up over the
@@ -321,34 +331,35 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
               the receiving wallet would have held only 12% of supply while the person behind it
               would have crossed 30%, are each a real transaction on Monad testnet.</li>
             <li><b>The subgroup write-back.</b> Quorum reads its own seat state on-chain and writes
-              the answer back into each person's A-Pass as a subgroup tag — <code>QS</code> seated,
-              <code>QU</code> not. An A-Token rule requiring <code>allowed_sub_group: "QS"</code>
-              then makes <em>Cleanverse's own engine</em> refuse anyone Quorum never seated, using
-              the only rule shape their engine has. Live: person 6 is refused by
-              <code>verify_apass</code> with an on-chain <code>SubGroupMismatch</code> revert, while
-              all seven seated wallets pass.</li>
+              the answer back into each person's A-Pass as a subgroup tag: <code>QS</code> for
+              seated, <code>QU</code> for not. An A-Token rule requiring
+              <code>allowed_sub_group: "QS"</code> then makes <em>Cleanverse's own engine</em>
+              refuse anyone Quorum never seated, using the only rule shape their engine has. Live:
+              person 6 is refused by <code>verify_apass</code> with an on-chain
+              <code>SubGroupMismatch</code> revert, while all seven seated wallets pass.</li>
           </ul>
           <div class="note">
-            <b>Why the fourth layer is the point.</b> Cleanverse's engine cannot compute an
-            aggregate — every rule it has is a per-wallet attribute check, so it can never answer
-            "how many distinct people hold this." Quorum can. So Quorum computes the set-level
-            answer and hands it back as a per-wallet attribute, which is precisely the shape their
-            engine <em>can</em> evaluate. The result is that a conclusion only Quorum could reach
-            gets enforced by their code, on their infrastructure, through a codepath that never
-            touches ours.
+            <b>Why the fourth layer is the point.</b> Cleanverse's engine can't compute an
+            aggregate. Every rule it has is a per-wallet attribute check, so on its own it can
+            never answer "how many distinct people hold this." Quorum can answer that question, so
+            Quorum computes the set-level result and hands it back as a per-wallet attribute, which
+            is exactly the shape their engine can evaluate. The result: a conclusion only Quorum
+            could reach gets enforced by their code, on their infrastructure, through a codepath
+            that never touches ours.
             <br><br>
-            Person 6 is now refused <b>twice, independently</b>: once by
-            <code>QuorumAsset</code>'s transfer hook, once by Cleanverse's own check. Neither
-            refusal depends on the other, which is the property that matters — the contract still
-            enforces the cap alone if the write-back is stale, so this layer is additional evidence,
-            never load-bearing.
+            Person 6 is now refused <b>twice, independently</b>. Once by
+            <code>QuorumAsset</code>'s transfer hook, once by Cleanverse's own check, and neither
+            refusal depends on the other. That independence is the property that matters, since the
+            contract still enforces the cap on its own even if the write-back goes stale, so this
+            layer sits on top as additional evidence, on a cap the contract already enforces alone.
           </div>
           <div class="note">
             <b>A finding worth recording: A-Token rules are OR-combined.</b> With both a
-            country-only rule and the <code>QS</code> rule registered, person 6 still passed — any
-            single matching rule admits a wallet. The permissive country-only rule had to be removed
-            for the subgroup gate to bind. The remaining rule carries the country condition itself,
-            so nothing was loosened. This is not documented and was established empirically.
+            country-only rule and the <code>QS</code> rule registered, person 6 still passed,
+            because any single matching rule admits a wallet. The permissive country-only rule had
+            to be removed for the subgroup gate to bind. The remaining rule still carries the
+            country condition itself, so nothing was loosened in the process. This isn't documented
+            anywhere and was established empirically.
           </div>
           <div class="note">
             <b>Why this matters for the integration.</b> Remove Cleanverse from this design and
@@ -388,7 +399,7 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
             </div>
           </div>
           <p>
-            The demo runs a five-seat standing cap rather than Singapore's real limit of fifty,
+            The demo runs a five-seat standing cap, smaller than Singapore's real limit of fifty,
             for a reason worth stating plainly: fifty genuinely bank-verified identities are not
             obtainable inside a hackathon sandbox, and faking forty-nine of them to stage the
             fiftieth being refused would turn the one thing this project is arguing against into
@@ -404,18 +415,19 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
           <p>Quorum touches both halves of the Cleanverse stack, and both are load-bearing.</p>
           <h3>CVI, A-Pass</h3>
           <p>
-            <code>generate_apass</code> registers a wallet against a verified identity and returns
-            <code>currentKycHash</code>, the value Quorum's <code>PersonRegistry</code> keys on.
+            <code>generate_apass</code> registers a wallet against a verified identity. Quorum's
+            <code>PersonRegistry</code> keys on that identity's <code>customerId</code>, Cleanverse's
+            persistent per-customer identifier, instead of the wallet itself.
             <code>verify_apass</code> gives a live composite verdict for a wallet against a given
-            A-Token, which Quorum reads rather than reimplementing. <code>update_status</code> can
+            A-Token, which Quorum reads instead of reimplementing. <code>update_status</code> can
             freeze a credential, and a frozen holder keeps their seat, since in law they still hold
             the security, while being blocked from acquiring more. That freeze is a live event this
-            register reacts to, not a flag in a database somewhere that nobody is watching.
+            register reacts to directly, not a flag in a database that nobody is watching.
           </p>
           <h3>CVA, A-Token and Validator</h3>
           <p>
             <code>QuorumAsset</code> is registered as an A-Token through
-            <code>register_atoken</code> rather than issued through Cleanverse's own launch flow,
+            <code>register_atoken</code> instead of through Cleanverse's own launch flow,
             because launching would have Cleanverse deploy the contract and leave no transfer hook
             to put the seat logic in. Registering a contract Quorum already controls keeps the
             enforcement and the asset in the same place. The same contract registers again as a
@@ -430,19 +442,19 @@ error <span class="k">RecipientNotRegistered</span>(address wallet);
         <div class="prose">
           <p>
             Quorum is not a hosted service. There is no API key to request and nothing to sign up
-            for. Adoption has one hard constraint worth stating before anything else: <b>an already
-            -deployed plain ERC-20 cannot be retrofitted.</b> Its bytecode is immutable, there is no
-            hook to add, and no amount of dashboard tooling changes that. Every path below routes
-            around that fact rather than pretending it isn't there.
+            for. Adoption has one hard constraint worth stating before anything else: <b>an
+            already-deployed plain ERC-20 cannot be retrofitted.</b> Its bytecode is immutable,
+            there is no hook to add, and no amount of dashboard tooling changes that. Every path
+            below is built around that fact instead of working against it.
           </p>
 
           <h4>1. Self-serve issuance, no one's permission required</h4>
           <p>
-            <code>QuorumFactory</code> deploys a complete register — <code>PersonRegistry</code>,
-            <code>SeatLedger</code>, <code>QuorumAsset</code>, fully wired — in one transaction, and
-            the caller owns all of it. We do not hold a key on it and cannot act on it: every
-            owner-only call the factory routes is gated to the wallet that deployed that specific
-            register, checked on every call, not just at deployment.
+            <code>QuorumFactory</code> deploys a complete register in one transaction:
+            <code>PersonRegistry</code>, <code>SeatLedger</code>, and <code>QuorumAsset</code>,
+            fully wired, and the caller owns all of it. We hold no key on it and can't act on it,
+            because every owner-only call the factory routes is gated to the wallet that deployed
+            that specific register, checked on every call, not just at deployment.
           </p>
           <div class="codeblock">
 factory.deploy(
@@ -455,65 +467,65 @@ factory.deploy(
 <span class="c">// returns (asset, registry, ledger) - you own all three from this call onward</span>
           </div>
           <p>
-            Live, not theoretical: a wallet unconnected to any address elsewhere on this site
-            deployed <code>Acme Series A</code> through the factory with Singapore's real
-            parameters — 50 persons, a rolling year, a 30% ceiling — while this demo runs its
+            This is live, not theoretical: a wallet unconnected to any address elsewhere on this
+            site deployed <code>Acme Series A</code> through the factory with Singapore's real
+            parameters (50 persons, a rolling year, a 30% ceiling) while this demo runs its
             narrower 5-seat pack. Our own deployer then called <code>factory.issue()</code> against
             that register and was refused on-chain with <code>NotRegisterOwner</code>. Addresses and
             the failed transaction are in <code>contracts/deployments.json</code> under
             <code>factory</code>.
           </p>
           <p>
-            No terminal required: <a href="launch.html">launch.html</a> is a form over the same call
-            — connect a wallet, pick a jurisdiction preset or set your own numbers, sign once. The
-            person who is comfortable clicking "deploy" on a page and the person comfortable calling
-            a Solidity function should reach the identical contract, and now do.
+            No terminal required: <a href="launch.html">launch.html</a> is a form over the same
+            call. Connect a wallet, pick a jurisdiction preset or set your own numbers, sign once.
+            Someone comfortable clicking "deploy" on a page and someone comfortable calling a
+            Solidity function now reach the identical contract.
           </p>
 
-          <h4>2. Adopt without deploying anything — the one for an existing A-Token</h4>
+          <h4>2. Adopt without deploying anything, for an existing A-Token</h4>
           <p>
-            This is the layer 4 write-back, read as an integration path rather than a demo scene,
+            This is the layer 4 write-back, read here as an integration path instead of a demo scene,
             and it is the answer for a Cleanverse A-Token that already exists. Point Quorum's
-            resolver at it, call <code>add_rule</code> with <code>allowed_sub_group: "QS"</code> —
-            one API call — and the token gains person-level headcount enforcement with zero
-            contract changes, because the enforcement runs inside Cleanverse's engine, not inside
-            the token. Every A-Token already registered in this sandbox is reachable this way today.
-            Two honest limits: it is eventually consistent, not atomic, since there is a window
-            between a transfer and the tag update; and it enforces "is this person seated" rather
-            than evaluating each transfer's effect on the cap in the same transaction the way the
-            hook-based paths do.
+            resolver at it, call <code>add_rule</code> with <code>allowed_sub_group: "QS"</code> in
+            one API call, and the token gains person-level headcount enforcement with zero contract
+            changes, because the enforcement runs inside Cleanverse's engine, not inside the token.
+            Every A-Token already registered in this sandbox is reachable this way today. Two honest
+            limits worth naming: a window exists between a transfer and the tag update, so
+            consistency arrives eventually instead of atomically, and it enforces "is this person
+            seated" instead of evaluating each transfer's effect on the cap within the same
+            transaction the way the hook-based paths do.
           </p>
 
           <h4>3. Wrap an existing token</h4>
           <p>
-            For a plain ERC-20 with no A-Token to begin with: deposit the original, receive a
+            For a plain ERC-20 with no A-Token to begin with, deposit the original and receive a
             <code>QuorumAsset</code>-shaped wrapper that carries the hook, the same pattern WETH
-            uses for ETH. The restricted register lives at the wrapper layer, deployable through the
-            same factory. Designed, not built in the window — sound by the same reasoning as (1),
-            unproven the same way (2) was before we ran it.
+            uses for ETH. The restricted register would live at the wrapper layer, deployable
+            through the same factory. This one is designed but still unbuilt: sound by the same
+            reasoning as path 1, unproven the same way path 2 was before we actually ran it.
           </p>
 
           <h4>4. Ask without integrating at all</h4>
           <p>
             <code>preflight()</code> is a <code>view</code> function, so anyone can call it for free
-            over <code>eth_call</code> — a transfer agent's existing dashboard, another protocol, or
-            a judge with a terminal. It runs the identical evaluation the transfer hook runs, against
+            over <code>eth_call</code>: a transfer agent's existing dashboard, another protocol, or
+            a judge with a terminal. It runs the same evaluation the transfer hook runs, against
             live state, and submits nothing.
           </p>
           <div class="codeblock">
-<span class="c">// (allowed, reason, seatsAfter) — the same answer the hook would give</span>
+<span class="c">// (allowed, reason, seatsAfter): the same answer the hook would give</span>
 (<span class="k">bool</span> allowed, <span class="k">bytes32</span> reason, <span class="k">uint32</span> seatsAfter)
     = asset.preflight(from, to, value);
           </div>
 
           <h4>The part that is genuinely manual</h4>
           <p>
-            Person resolution is an operator action today, not a daemon. When someone registers an
-            A-Pass, a script reads their <code>customerId</code> from Cleanverse and writes
+            Person resolution is an operator action today, not yet a daemon. When someone registers
+            an A-Pass, a script reads their <code>customerId</code> from Cleanverse and writes
             <code>keccak256(customerId)</code> into <code>PersonRegistry</code>. In production that
-            is a service watching for new registrations; here it is
+            would be a service watching for new registrations; here it's
             <code>scripts/bind-persons.js</code>, run by hand. The contract enforces continuously
-            once a person is bound — but nothing binds them automatically.
+            once a person is bound, though nothing binds them automatically yet.
           </p>
         </div>
       </section>
@@ -523,8 +535,8 @@ factory.deploy(
         <div class="prose">
           <p>
             Every figure on the dashboard is a contract read you can repeat. Nothing below depends
-            on this site being honest — these commands query Monad testnet directly, so if we were
-            lying to you, they would say so.
+            on this site being honest, since these commands query Monad testnet directly. If we
+            were lying to you, they would say so.
           </p>
 
           <h4>The offering is full, and five persons hold ten wallets</h4>
@@ -533,7 +545,7 @@ factory.deploy(
 cast call 0x5f80999D2e449479E3765f81666A245135de0aca <span class="k">"activeSeats()(uint32)"</span> \
   --rpc-url https://testnet-rpc.monad.xyz
 
-<span class="c"># three different wallets, all resolving to person 1 — this is the whole thesis</span>
+<span class="c"># three different wallets, all resolving to person 1: this is the whole thesis</span>
 <span class="k">for</span> w <span class="k">in</span> 0x66493CA72F0731d1915501732799534d8323AB51 \
          0xAd51C2F3698EA4C6A6b99C7B2aBC994c796e81D2 \
          0x3b04f106BB9De2a0a4A8660e74AbB01D7cA6C4d0; <span class="k">do</span>
@@ -554,13 +566,13 @@ cast call 0x26B57c58C20C171233e15c73fA1bD814b269dD88 \
   0x9023bfF79B55Ae91149AD86D8Fd7cF3111d9e5d8 10000000000000000000 \
   --rpc-url https://testnet-rpc.monad.xyz
 
-<span class="c"># false, EXEMPTION_CAPACITY_EXHAUSTED, 5 — decode the reason with:</span>
+<span class="c"># false, EXEMPTION_CAPACITY_EXHAUSTED, 5. Decode the reason with:</span>
 cast --to-ascii &lt;the bytes32 above&gt;
           </div>
 
           <h4>Concentration is measured per person, not per wallet</h4>
           <p>
-            Person 1 holds 26% of supply across three wallets, against a 30% ceiling — while no
+            Person 1 holds 26% of supply across three wallets, against a 30% ceiling, while no
             single one of those wallets holds more than 12%. Ask for 40 more into their second
             wallet, which would leave that wallet at 20% and the person at 34%:
           </p>
@@ -602,7 +614,7 @@ curl -s -X POST https://uatapi.cleanverse.com/api/cooperate/verify_apass \
           <div class="codeblock">
 git clone https://github.com/IamHarrie-Labs/quorum &amp;&amp; <span class="k">cd</span> quorum/contracts
 forge test
-<span class="c"># 17 passing, including fuzz invariants asserting activeSeats never exceeds</span>
+<span class="c"># 20 passing, including fuzz invariants asserting activeSeats never exceeds</span>
 <span class="c"># the cap or the number of distinct persons, over 8192 randomised calls each</span>
           </div>
         </div>
@@ -613,9 +625,9 @@ forge test
         <div class="prose">
           <p>
             This is a working proof that the architecture holds on live infrastructure. It is not a
-            production system, and the difference is worth being specific about — a compliance tool
-            that overstates itself is worse than no compliance tool, because someone might believe
-            it.
+            production system, and the difference is worth being specific about, since a compliance
+            tool that overstates itself is worse than no compliance tool at all: someone might
+            believe it.
           </p>
 
           <h4>The legal mapping is approximate</h4>
@@ -633,11 +645,11 @@ forge test
             The live demo runs a deliberately narrow configuration, and the getters will tell you so:
           </p>
           <ul>
-            <li><code>windowDays = 0</code> — a standing cap, not the rolling 12-month window that
+            <li><code>windowDays = 0</code>: a standing cap, not the rolling 12-month window that
               s.272A actually specifies. The rolling path is implemented and fuzz-tested, but the
-              behaviour that matters most for Singapore is not the behaviour on display. Changing it
-              means redeploying, since it is fixed at construction.</li>
-            <li><code>requireAPass = false</code> — <code>PersonRegistry</code> does not check
+              behaviour that matters most for Singapore isn't the behaviour on display here.
+              Changing it means redeploying, since it's fixed at construction.</li>
+            <li><code>requireAPass = false</code>: <code>PersonRegistry</code> doesn't check
               on-chain A-Pass possession before binding a wallet. See the trust note below.</li>
           </ul>
 
@@ -648,10 +660,10 @@ forge test
             registrar key. The contract cannot verify that mapping. A compromised or careless
             registrar could bind two wallets to one person who are not the same human, or split one
             human across two person IDs, and the seat count would be wrong in a way the invariant
-            cannot detect — the invariant guarantees the count is consistent, not that it is true.
-            Closing this properly means either an on-chain A-Pass check with a real per-wallet
-            identity signal, or an attestation signed by Cleanverse that the contract can verify.
-            Neither exists here.
+            can't detect, because the invariant only guarantees the count stays consistent. It can't
+            guarantee the underlying mapping is true. Closing this properly needs either an on-chain
+            A-Pass check with a real per-wallet identity signal, or an attestation signed by
+            Cleanverse that the contract itself can verify. Neither exists here yet.
           </p>
 
           <h4>Everything else that a production deployment would need</h4>
