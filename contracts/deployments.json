@@ -1,6 +1,7 @@
 {
-  "liveDemo": "https://tryquorum.vercel.app/dashboard.html",
+  "liveDemo": "https://tryquorum.vercel.app/dashboard",
   "liveDemoMirror": "https://iamharrie-labs.github.io/quorum/dashboard.html",
+  "demoVideo": "https://youtu.be/xT9-FX6VcdI",
   "repo": "https://github.com/IamHarrie-Labs/quorum",
   "monad-testnet": {
     "chainId": 10143,
